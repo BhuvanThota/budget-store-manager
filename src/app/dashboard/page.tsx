@@ -1,8 +1,8 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import Image from 'next/image'
 import SignOutButton from '@/components/SignOutButton'
+import Image from 'next/image'
 
 export default async function Dashboard() {
   const session = await getServerSession(authOptions)
@@ -29,7 +29,9 @@ export default async function Dashboard() {
               <Image
                 src={session.user.image}
                 alt="Profile"
-                className="w-16 h-16 rounded-full"
+                width={64}
+                height={64}
+                className="rounded-full"
               />
             )}
             <div>
