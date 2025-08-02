@@ -54,6 +54,10 @@ model User {
   sessions      Session[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  // A user can be a member of a shop
+  shopId        String?
+  shop          Shop?     @relation(fields: [shopId], references: [id])
 }
 
 model VerificationToken {
@@ -62,4 +66,78 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// NEW: Add the Shop model
+model Shop {
+  id        String    @id @default(uuid())
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // A shop can have many users (members)
+  members   User[]
+  // A shop has its own set of products, orders, and requests
+  products  Product[]
+  orders    Order[]
+  requests  Request[]
+}
+
+// UPDATE: Link Product to a Shop
+model Product {
+  id           String @id @default(uuid())
+  name         String
+  totalCost    Float
+  initialStock Int
+  currentStock Int
+  sellPrice    Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  shopId       String
+  shop         Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  orderItems   OrderItem[]
+
+  @@unique([shopId, name]) // A product name must be unique within a shop
+}
+
+// UPDATE: Link Order to a Shop
+model Order {
+  id          String   @id @default(uuid())
+  orderId     Int      @default(autoincrement())
+  totalAmount Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  
+  items       OrderItem[]
+
+  @@unique([shopId, orderId])
+}
+
+model OrderItem {
+  id           String  @id @default(uuid())
+  quantity     Int
+  soldAt       Float
+  costAtSale   Float
+  
+  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId      String
+  
+  product      Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productId    String
+  productName  String
+}
+
+// UPDATE: Link Request to a Shop
+model Request {
+  id        String   @id @default(uuid())
+  item      String
+  createdAt DateTime @default(now())
+
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
 }
