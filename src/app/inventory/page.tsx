@@ -27,10 +27,11 @@ export default function InventoryPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // New state for the custom delete confirmation modal
+  // State for the custom delete confirmation modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
+  // State for the price calculator
   const [calcCost, setCalcCost] = useState('');
   const [calcItems, setCalcItems] = useState('');
 
@@ -42,7 +43,7 @@ export default function InventoryPage() {
     fetchProducts();
   }, []);
 
-  // Combined effect to handle closing modals on outside click
+  // Effect to handle closing modals on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isModalOpen && modalRef.current && !modalRef.current.contains(event.target as Node)) {
@@ -72,6 +73,7 @@ export default function InventoryPage() {
   };
 
   const openModal = () => setIsModalOpen(true);
+  
   const closeModal = () => {
     setIsModalOpen(false);
     setFormData(initialFormState);
@@ -162,6 +164,7 @@ export default function InventoryPage() {
     }
   };
 
+  // --- Price Calculator Logic ---
   const calcCostPerItem = parseFloat(calcCost) > 0 && parseInt(calcItems) > 0
     ? parseFloat(calcCost) / parseInt(calcItems)
     : 0;
@@ -174,18 +177,25 @@ export default function InventoryPage() {
     { label: '200% Profit (3x)', value: calcCostPerItem * 3.00 },
   ];
 
+  // --- Live Profit/Loss Margin for Form ---
   const formCostPerItem = parseFloat(formData.totalCost) > 0 && parseInt(formData.initialStock) > 0
     ? parseFloat(formData.totalCost) / parseInt(formData.initialStock)
     : 0;
   
   const formSellPrice = parseFloat(formData.sellPrice);
+  
   const formProfitMargin = formCostPerItem > 0 && formSellPrice > formCostPerItem
     ? ((formSellPrice - formCostPerItem) / formCostPerItem) * 100
+    : 0;
+  
+  const formLossMargin = formCostPerItem > 0 && formSellPrice < formCostPerItem
+    ? ((formCostPerItem - formSellPrice) / formCostPerItem) * 100
     : 0;
 
   return (
     <>
       <div className="container mx-auto p-4 md:p-6 space-y-6">
+        {/* Inventory Table Card */}
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex justify-between items-center border-b pb-4 mb-4">
             <h2 className="text-xl font-bold text-gray-700">📦 My Inventory</h2>
@@ -202,7 +212,7 @@ export default function InventoryPage() {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cost/Item</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cost Price</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sell Price</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
@@ -227,6 +237,7 @@ export default function InventoryPage() {
           </div>
         </div>
 
+        {/* Price Calculator Card */}
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-bold text-gray-700 border-b pb-4 mb-4">
             💡 Sell Price Calculator
@@ -258,7 +269,7 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* MODAL BACKDROP: Changed to a semi-transparent blur */}
+      {/* Modal Backdrop */}
       {(isModalOpen || isDeleteModalOpen) && (
         <div className="fixed inset-0 bg-gray-500/30 backdrop-blur-sm z-40 transition-opacity duration-300"></div>
       )}
@@ -283,17 +294,34 @@ export default function InventoryPage() {
                 <label htmlFor="initialStock" className="block text-sm font-medium text-gray-700 mb-1">Number of Items / Stock</label>
                 <input type="number" id="initialStock" name="initialStock" value={formData.initialStock} onChange={handleInputChange} required className="w-full p-2 border border-gray-300 rounded-md" />
               </div>
+
+              {formCostPerItem > 0 && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-left">
+                  <p className="text-sm font-medium text-blue-800">
+                    Calculated cost per item: <span className="font-bold">₹{formCostPerItem.toFixed(2)}</span>
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label htmlFor="sellPrice" className="block text-sm font-medium text-gray-700 mb-1">Selling Price per Item (₹)</label>
                 <input type="number" step="0.01" id="sellPrice" name="sellPrice" value={formData.sellPrice} onChange={handleInputChange} required className="w-full p-2 border border-gray-300 rounded-md" />
               </div>
-              {formProfitMargin > 0 && (
+              
+              {formProfitMargin > 0 ? (
                 <div className="p-3 bg-green-50 border border-green-200 rounded-md text-center">
                   <p className="text-sm font-medium text-green-800">
                     Profit Margin: <span className="font-bold">{formProfitMargin.toFixed(1)}%</span>
                   </p>
                 </div>
+              ) : formLossMargin > 0 && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-md text-center">
+                  <p className="text-sm font-medium text-red-800">
+                    Loss: <span className="font-bold">{formLossMargin.toFixed(1)}%</span>
+                  </p>
+                </div>
               )}
+
               <div className="flex justify-end space-x-3 pt-4">
                 <button type="button" onClick={closeModal} className="bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300">
                   Cancel
@@ -307,7 +335,7 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* NEW: Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && productToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div ref={deleteModalRef} className="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
