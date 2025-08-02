@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default async function Home() {
   const session = await getServerSession(authOptions)
@@ -14,8 +15,17 @@ export default async function Home() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="flex min-h-screen items-center justify-center px-4">
         <div className="w-full max-w-md text-center">
+          <div className="flex justify-center mb-6">
+            <Image
+              src="/logo-budget.png"
+              alt="Budget Shop Manager Logo"
+              width={100}
+              height={100}
+              className="rounded-lg"
+            />
+          </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Welcome to My App
+            Welcome to Budget Shop Manager
           </h1>
           <p className="text-gray-600 mb-8">
             Sign in to get started with your account

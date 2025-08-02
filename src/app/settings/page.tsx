@@ -4,11 +4,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import SignOutButton from '@/components/SignOutButton'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import SettingsForm from '@/components/SettingsForm'
+import UserMenu from '@/components/UserMenu'
 
 async function SettingsContent() {
   const session = await getServerSession(authOptions)
@@ -17,7 +17,7 @@ async function SettingsContent() {
     redirect('/auth/signin')
   }
 
-  // Get user data with accounts
+  // Get user data
   const user = await prisma.user.findUnique({
     where: { email: session.user.email! },
     select: { 
@@ -48,7 +48,9 @@ async function SettingsContent() {
               </Link>
               <h1 className="text-2xl font-bold text-gray-900">Account Settings</h1>
             </div>
-            <SignOutButton />
+
+            {/* Menu for smaller screens */}
+            <UserMenu user={user} />
           </div>
         </div>
       </div>

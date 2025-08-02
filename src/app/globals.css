@@ -23,4 +23,32 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+
+  /* Add these styles for the background image */
+  background-image: url('/logo-budget.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain; /* Use 'contain' to ensure the whole logo is visible */
+  background-attachment: fixed; /* Keeps the background fixed during scroll */
+  position: relative;
+  z-index: 0;
+}
+
+/* Add this pseudo-element for the overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white overlay */
+  z-index: -1; /* Place it behind the content */
+}
+
+/* For dark mode, use a dark overlay */
+@media (prefers-color-scheme: dark) {
+  body::before {
+    background-color: rgba(10, 10, 10, 0.8);
+  }
 }
