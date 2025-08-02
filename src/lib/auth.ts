@@ -57,6 +57,8 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user, account }) {
+
+      // For credentials provider, store user info in JWT
       if (user && account?.provider === 'credentials') {
         token.sub = user.id;
         token.name = user.name;
@@ -66,7 +68,8 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token, user }) {
-      // For database-backed sessions (OAuth)
+
+      // For database sessions (OAuth users)
       if (user) {
         session.user.id = user.id;
         return session;
@@ -120,3 +123,4 @@ export const authOptions: NextAuthOptions = {
   },
   debug: process.env.NODE_ENV === 'development', // Only debug in development
 };
+
