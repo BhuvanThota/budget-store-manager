@@ -1,25 +1,18 @@
 // src/app/settings/page.tsx
 
+import { Suspense } from 'react'
+import Image from 'next/image'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import Image from 'next/image'
-import Link from 'next/link'
-import { Suspense } from 'react'
+
+import Navbar from '@/components/Navbar' // Import the new Navbar
 import SettingsForm from '@/components/SettingsForm'
-import UserMenu from '@/components/UserMenu'
 
-async function SettingsContent() {
+export default async function Settings() {
   const session = await getServerSession(authOptions)
-  
-  if (!session) {
-    redirect('/auth/signin')
-  }
-
-  // Get user data
   const user = await prisma.user.findUnique({
-    where: { email: session.user.email! },
+    where: { email: session!.user!.email! },
     select: { 
       id: true, 
       name: true, 
@@ -30,29 +23,12 @@ async function SettingsContent() {
   })
 
   if (!user) {
-    redirect('/auth/signin')
+    return null; // Or redirect
   }
 
   return (
     <div className="min-h-screen bg-brand-background">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <Link 
-                href="/dashboard"
-                className="text-brand-primary hover:opacity-80 transition-opacity"
-              >
-                ← Back to Dashboard
-              </Link>
-              <h1 className="text-2xl font-bold text-brand-text">Account Settings</h1>
-            </div>
-
-            <UserMenu user={user} />
-          </div>
-        </div>
-      </div>
+      <Navbar pageTitle="Account Settings" />
 
       <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-lg shadow p-6">
@@ -74,17 +50,11 @@ async function SettingsContent() {
               </p>
             </div>
           </div>
-          <SettingsForm user={user} />
+          <Suspense fallback={<div>Loading form...</div>}>
+            <SettingsForm user={user} />
+          </Suspense>
         </div>
       </div>
     </div>
-  )
-}
-
-export default function Settings() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <SettingsContent />
-    </Suspense>
   )
 }
