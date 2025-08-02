@@ -4,7 +4,7 @@
 
 import { signIn } from 'next-auth/react'
 import { useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 function SignInForm() {
@@ -12,25 +12,28 @@ function SignInForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
   const searchParams = useSearchParams()
   const message = searchParams.get('message')
+
+  // Get the callbackUrl from the query parameters, or default to /dashboard
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
 
   const handleSignIn = async (provider: 'google' | 'credentials') => {
     setIsLoading(true)
     setError('')
 
     const result = await signIn(provider, {
-      redirect: false,
+      // Use the callbackUrl here and remove redirect: false
+      callbackUrl,
       email,
       password,
     })
 
+    // This part will now only run if there's an error,
+    // as a successful sign-in will trigger a full page redirect.
     if (result?.error) {
       setError('Invalid email or password')
       setIsLoading(false)
-    } else {
-      router.push('/dashboard')
     }
   }
 

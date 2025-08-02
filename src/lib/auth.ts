@@ -33,7 +33,7 @@ export const authOptions: NextAuthOptions = {
         if (!user || !user.password) {
           return null;
         }
-
+        
         const isValidPassword = await bcrypt.compare(credentials.password, user.password);
 
         if (!isValidPassword) {
@@ -50,17 +50,18 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    // The 'user' object is now available because of the database strategy
+    // With a 'database' strategy, the session callback receives the 'user' object
     session: ({ session, user }) => ({
         ...session,
         user: {
             ...session.user,
-            id: user.id, // Get ID from the user object
+            id: user.id,
         },
     }),
   },
   session: {
-    strategy: 'database', // Change this from 'jwt' to 'database'
+    // This MUST be 'database' when using the Prisma adapter
+    strategy: 'database',
   },
   pages: {
     signIn: '/auth/signin',
