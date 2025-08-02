@@ -4,11 +4,10 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import SignOutButton from '@/components/SignOutButton'
 import SuccessMessage from '@/components/SuccessMessage'
 import Image from 'next/image'
 import { Suspense } from 'react'
-import Link from 'next/link'
+import UserMenu from '@/components/UserMenu'
 
 async function DashboardContent() {
   const session = await getServerSession(authOptions)
@@ -54,16 +53,12 @@ async function DashboardContent() {
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
             <div className="flex items-center space-x-4">
-              <Link
-                href="/settings"
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Settings
-              </Link>
-              <SignOutButton />
+              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
             </div>
+
+            {/* Menu */}
+            <UserMenu user={user} />
           </div>
         </div>
       </div>
