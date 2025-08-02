@@ -1,48 +1,37 @@
 // src/app/dashboard/page.tsx
 
+import { Suspense } from 'react'
+import Image from 'next/image'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+
+import Navbar from '@/components/Navbar' // Import the new Navbar
 import SuccessMessage from '@/components/SuccessMessage'
-import Image from 'next/image'
-import { Suspense } from 'react'
-import UserMenu from '@/components/UserMenu'
 
-async function DashboardContent() {
+// Note: This component no longer needs to be async since Navbar handles data fetching.
+// However, we still need some user data for the welcome message.
+export default async function Dashboard() {
   const session = await getServerSession(authOptions)
-  
-  if (!session) {
-    redirect('/auth/signin')
-  }
-
-  // Check user's authentication setup
   const user = await prisma.user.findUnique({
-    where: { email: session.user.email! },
+    where: { email: session!.user!.email! },
     select: { 
-      id: true, 
-      name: true, 
-      email: true, 
+      name: true,
+      email: true,
       image: true,
       password: true,
-      accounts: {
-        select: { provider: true }
-      }
+      accounts: { select: { provider: true } }
     },
   })
 
   if (!user) {
-    redirect('/auth/signin')
+    return null; // Or redirect
   }
 
   const hasOAuthAccount = user.accounts.some(account => account.provider !== 'credentials')
-  const hasCredentialsAccount = user.accounts.some(account => account.provider === 'credentials')
   const hasPassword = !!user.password
-
-  // Determine authentication status
   const authStatus = {
     hasOAuth: hasOAuthAccount,
-    hasCredentials: hasCredentialsAccount,
     hasPassword: hasPassword,
     needsPasswordSetup: hasOAuthAccount && !hasPassword,
     canUseMultipleSignIn: hasOAuthAccount && hasPassword
@@ -50,14 +39,7 @@ async function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-brand-background">
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <h1 className="text-2xl font-bold text-brand-text">Dashboard</h1>
-            <UserMenu user={user} />
-          </div>
-        </div>
-      </div>
+      <Navbar pageTitle="Dashboard" />
 
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <Suspense fallback={null}>
@@ -66,9 +48,9 @@ async function DashboardContent() {
         
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center space-x-4 mb-6">
-            {session.user?.image && (
+            {user.image && (
               <Image
-                src={session.user.image}
+                src={user.image}
                 alt="Profile"
                 width={64}
                 height={64}
@@ -77,9 +59,9 @@ async function DashboardContent() {
             )}
             <div>
               <h2 className="text-xl font-semibold text-brand-text">
-                Welcome back, {session.user?.name}!
+                Welcome back, {user.name}!
               </h2>
-              <p className="text-gray-500">{session.user?.email}</p>
+              <p className="text-gray-500">{user.email}</p>
               
               <div className="flex flex-wrap gap-2 mt-2">
                 {authStatus.hasOAuth && (
@@ -162,13 +144,5 @@ async function DashboardContent() {
         </div>
       </div>
     </div>
-  )
-}
-
-export default function Dashboard() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <DashboardContent />
-    </Suspense>
   )
 }

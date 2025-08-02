@@ -52,7 +52,7 @@ export default function UserMenu({ user }: UserMenuProps) {
       {/* --- User Avatar as Toggle Button --- */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="focus:outline-none focus:ring-2 focus:ring-offset-2 ring-brand-primary rounded-full"
+        className="bg-white p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 ring-brand-primary"
         aria-label="Toggle user menu"
       >
         {user?.image ? (
