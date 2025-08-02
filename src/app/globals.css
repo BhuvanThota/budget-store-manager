@@ -1,54 +1,42 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* New Custom Palette */
+  --brand-primary: #3D74B6;      /* Blue */
+  --brand-secondary: #EAC8A6;    /* Tan */
+  --brand-accent: #DC3C22;       /* Red-Orange */
+  --brand-background: #FBF5DE;   /* Cream */
+  --brand-text: #2D3748;          /* Charcoal Grey */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Standard Colors */
+  --background: var(--brand-background);
+  --foreground: var(--brand-text);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-
-  /* Add these styles for the background image */
-  background-image: url('/logo-budget.png');
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: contain; /* Use 'contain' to ensure the whole logo is visible */
-  background-attachment: fixed; /* Keeps the background fixed during scroll */
-  position: relative;
-  z-index: 0;
 }
 
-/* Add this pseudo-element for the overlay */
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white overlay */
-  z-index: -1; /* Place it behind the content */
+/* --- Custom Utility Classes for Theming --- */
+
+/* Backgrounds */
+.bg-brand-primary { background-color: var(--brand-primary); }
+.bg-brand-secondary { background-color: var(--brand-secondary); }
+.bg-brand-background { background-color: var(--background); }
+
+/* Text Colors */
+.text-brand-primary { color: var(--brand-primary); }
+.text-brand-accent { color: var(--brand-accent); }
+.text-brand-text { color: var(--foreground); }
+
+/* Rings (for focus states) */
+.ring-brand-primary {
+  --tw-ring-color: var(--brand-primary);
 }
 
-/* For dark mode, use a dark overlay */
-@media (prefers-color-scheme: dark) {
-  body::before {
-    background-color: rgba(10, 10, 10, 0.8);
-  }
+/* Hover States */
+.hover\:bg-brand-primary-dark:hover {
+  filter: brightness(90%);
 }

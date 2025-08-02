@@ -52,19 +52,19 @@ export default function UserMenu({ user }: UserMenuProps) {
       {/* --- User Avatar as Toggle Button --- */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full"
+        className="focus:outline-none focus:ring-2 focus:ring-offset-2 ring-brand-primary rounded-full"
         aria-label="Toggle user menu"
       >
         {user?.image ? (
           <Image
             src={user.image}
             alt="User profile"
-            width={40}  // Changed from 32
-            height={40} // Changed from 32
+            width={40}
+            height={40}
             className="rounded-full"
           />
         ) : (
-          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center"> {/* Changed from h-8 w-8 */}
+          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
             <span className="text-gray-600 font-medium">{user?.name?.charAt(0)}</span>
           </div>
         )}
@@ -79,7 +79,7 @@ export default function UserMenu({ user }: UserMenuProps) {
           <div className="flex items-center justify-between p-3 border-b border-gray-200">
             <div className="flex items-center space-x-2">
               {user?.image && <Image src={user.image} alt="User profile" width={24} height={24} className="rounded-full" />}
-              <span className="text-sm font-semibold text-gray-900">{user?.name}</span>
+              <span className="text-sm font-semibold text-brand-text">{user?.name}</span>
             </div>
             <button
               onClick={() => setIsOpen(false)}
@@ -109,7 +109,8 @@ export default function UserMenu({ user }: UserMenuProps) {
                 signOut({ callbackUrl: '/' });
                 setIsOpen(false);
               }}
-              className="flex items-center w-full px-3 py-2 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+              style={{ backgroundColor: 'var(--brand-accent)' }}
+              className="flex items-center w-full px-3 py-2 text-sm font-semibold text-white rounded-md hover:opacity-90 transition-colors"
             >
               <svg className="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
