@@ -3,7 +3,7 @@
 import { NextAuthOptions } from 'next-auth'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import GoogleProvider from 'next-auth/providers/google'
-import CredentialsProvider from 'next-auth/providers/credentials' // Import CredentialsProvider
+import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from '@/lib/prisma'
 import { Adapter } from 'next-auth/adapters'
 import bcrypt from 'bcrypt'
@@ -15,7 +15,6 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
-    // Add the new CredentialsProvider
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -51,16 +50,17 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    session: ({ session, token }) => ({
+    // The 'user' object is now available because of the database strategy
+    session: ({ session, user }) => ({
         ...session,
         user: {
             ...session.user,
-            id: token.sub,
+            id: user.id, // Get ID from the user object
         },
     }),
   },
   session: {
-    strategy: 'jwt',
+    strategy: 'database', // Change this from 'jwt' to 'database'
   },
   pages: {
     signIn: '/auth/signin',
