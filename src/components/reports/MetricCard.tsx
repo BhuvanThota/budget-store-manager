@@ -11,7 +11,7 @@ export default function MetricCard({ title, value, prefix = '', bgColor, textCol
     return (
     <div className={`${bgColor} p-4 rounded-lg text-center`}>
       <p className="text-sm text-gray-500">{title}</p>
-      <p className={`text-2xl md:text-lg lg:text-2xl font-bold ${textColor}`}>{prefix}{value}</p>
+      <p className={`text-lg lg:text-xl font-bold ${textColor}`}>{prefix}{value}</p>
     </div>
     );
 }
