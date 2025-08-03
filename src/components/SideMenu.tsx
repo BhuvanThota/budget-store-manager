@@ -67,9 +67,8 @@ export default function SideMenu() {
     {
       href: '/shop-settings',
       icon: <Store size={20} />,
-      label: 'Shop Settings & Management',
-      description: 'Shop Details & Settings',
-      badge: 'Coming Soon'
+      label: 'Shop Settings',
+      description: 'Shop Details',
     },
     {
       href: '/order-billing',

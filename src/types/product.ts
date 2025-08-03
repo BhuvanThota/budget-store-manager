@@ -6,6 +6,7 @@ export interface Product {
   initialStock: number;
   currentStock: number;
   sellPrice: number;
+  stockThreshold: number;
 }
 
 // Add this new interface

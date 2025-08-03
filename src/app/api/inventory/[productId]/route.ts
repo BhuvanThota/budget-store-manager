@@ -26,6 +26,7 @@ export async function PUT(
         initialStock: parseInt(data.initialStock),
         currentStock: data.currentStock,
         sellPrice: parseFloat(data.sellPrice),
+        stockThreshold: parseInt(data.stockThreshold, 10),
       },
     });
     return NextResponse.json(updatedProduct);

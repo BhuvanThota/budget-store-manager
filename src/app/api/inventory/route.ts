@@ -59,6 +59,7 @@ export async function POST(req: Request) {
         initialStock: parseInt(data.initialStock),
         currentStock: parseInt(data.initialStock), // currentStock starts same as initial
         sellPrice: parseFloat(data.sellPrice),
+        stockThreshold: parseInt(data.stockThreshold, 10),
         shopId: user.shopId,
       },
     });
