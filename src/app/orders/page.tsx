@@ -111,7 +111,7 @@ export default function OrdersPage() {
 
   return (
     <>
-      <div className="container mx-auto p-4 md:p-6 h-[calc(100vh-80px)]">
+      <div className="mx-auto p-4 md:p-6 max-w-[1000px] h-[calc(100vh-80px)]">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
           {/* Left Column: Orders List */}
           <div className="flex flex-col h-full md:pr-2">
