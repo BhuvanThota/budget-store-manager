@@ -10,6 +10,7 @@ const initialFormState = {
   totalCost: '',
   initialStock: '',
   sellPrice: '',
+  stockThreshold: '',
 };
 
 interface AddEditProductModalProps {
@@ -37,6 +38,7 @@ export default function AddEditProductModal({ isOpen, onClose, onSave, productTo
         totalCost: String(productToEdit.totalCost),
         initialStock: String(productToEdit.initialStock),
         sellPrice: String(productToEdit.sellPrice),
+        stockThreshold: String(productToEdit.stockThreshold),
       });
     } else if (productToRestock) { // Restocking (pre-filling a new item)
       setFormData({
@@ -68,6 +70,7 @@ export default function AddEditProductModal({ isOpen, onClose, onSave, productTo
       initialStock: number;
       sellPrice: number;
       currentStock?: number;
+      stockThreshold?: number;
     }
 
     const payload: ProductPayload = {
@@ -75,6 +78,7 @@ export default function AddEditProductModal({ isOpen, onClose, onSave, productTo
       totalCost: parseFloat(formData.totalCost),
       initialStock: parseInt(formData.initialStock, 10),
       sellPrice: parseFloat(formData.sellPrice),
+      stockThreshold: parseInt(formData.stockThreshold, 10),
     };
     
     // This logic now correctly handles both edits and restocks (which are just new items)
@@ -159,6 +163,10 @@ export default function AddEditProductModal({ isOpen, onClose, onSave, productTo
               </p>
             </div>
           )}
+          <div>
+            <label htmlFor="stockThreshold" className="block text-sm font-medium text-gray-700 mb-1">Stock Threshold</label>
+            <input type="number" id="stockThreshold" name="stockThreshold" value={formData.stockThreshold} onChange={handleInputChange} required className="w-full p-2 border border-gray-300 rounded-md" />
+          </div>
           <div className="flex justify-end space-x-3 pt-4">
             <button type="button" onClick={onClose} className="bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300">
               Cancel

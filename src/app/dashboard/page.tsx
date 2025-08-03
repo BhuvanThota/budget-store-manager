@@ -1,148 +1,111 @@
 // src/app/dashboard/page.tsx
+import Image from 'next/image';
+import { Suspense } from 'react';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { redirect } from 'next/navigation';
 
-import { Suspense } from 'react'
-import Image from 'next/image'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import Navbar from '@/components/Navbar';
+import LowStockWarning from '@/components/dashboard/LowStockWarning';
+import RestockSuggestions from '@/components/dashboard/RestockSuggestions';
+import CustomerRequests from '@/components/dashboard/CustomerRequests';
+import OrderChart from '@/components/dashboard/OrderChart';
+import SuccessMessage from '@/components/SuccessMessage';
+import PasswordSetup from '@/components/dashboard/PasswordSetup';
 
-import Navbar from '@/components/Navbar' // Import the new Navbar
-import SuccessMessage from '@/components/SuccessMessage'
+export default async function DashboardPage() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    redirect('/auth/signin');
+  }
 
-// Note: This component no longer needs to be async since Navbar handles data fetching.
-// However, we still need some user data for the welcome message.
-export default async function Dashboard() {
-  const session = await getServerSession(authOptions)
   const user = await prisma.user.findUnique({
-    where: { email: session!.user!.email! },
+    where: { email: session.user.email },
     select: { 
+      shopId: true,
       name: true,
       email: true,
       image: true,
-      password: true,
-      accounts: { select: { provider: true } }
+      password: true, // Needed to check if a password is set
+      accounts: { select: { provider: true } } // Needed to check for OAuth accounts
     },
-  })
+  });
 
-  if (!user) {
-    return null; // Or redirect
+  if (!user || !user.shopId) {
+    return (
+      <>
+        <Navbar pageTitle="Dashboard" />
+        <div className="container mx-auto p-6">
+          <p>Error: Could not find a shop associated with your account.</p>
+        </div>
+      </>
+    );
   }
 
-  const hasOAuthAccount = user.accounts.some(account => account.provider !== 'credentials')
-  const hasPassword = !!user.password
-  const authStatus = {
-    hasOAuth: hasOAuthAccount,
-    hasPassword: hasPassword,
-    needsPasswordSetup: hasOAuthAccount && !hasPassword,
-    canUseMultipleSignIn: hasOAuthAccount && hasPassword
-  }
+  const hasOAuthAccount = user.accounts.some(account => account.provider !== 'credentials');
+  const needsPasswordSetup = hasOAuthAccount && !user.password;
+
+  const [allProducts, customerRequests, chartDataRaw] = await Promise.all([
+    prisma.product.findMany({ where: { shopId: user.shopId } }),
+    prisma.request.findMany({ where: { shopId: user.shopId }, orderBy: { createdAt: 'desc' } }),
+    prisma.order.findMany({
+      where: {
+        shopId: user.shopId,
+        createdAt: { gte: new Date(new Date().setDate(new Date().getDate() - 30)) },
+      },
+      orderBy: { createdAt: 'asc' },
+    })
+  ]);
+
+  const lowStockItems = allProducts
+    .filter(p => p.currentStock > 0 && p.currentStock <= p.stockThreshold)
+    .sort((a, b) => a.currentStock - b.currentStock);
+  
+  const restockItems = allProducts.filter(p => p.currentStock === 0);
+
+  const ordersByDate = chartDataRaw.reduce((acc, order) => {
+    const date = order.createdAt.toISOString().split('T')[0];
+    acc[date] = (acc[date] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const chartData = Object.entries(ordersByDate).map(([date, count]) => ({
+    date,
+    orders: count,
+  }));
 
   return (
-    <div className="min-h-screen bg-brand-background">
+    <>
       <Navbar pageTitle="Dashboard" />
-
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto p-4 md:p-6 space-y-6">
         <Suspense fallback={null}>
-          <SuccessMessage />
+            <SuccessMessage />
         </Suspense>
         
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center space-x-4 mb-6">
-            {user.image && (
-              <Image
-                src={user.image}
-                alt="Profile"
-                width={64}
-                height={64}
-                className="rounded-full"
-              />
-            )}
+
+        <div className="bg-white p-6 rounded-lg shadow-md flex items-center gap-4">
+            {user.image && <Image src={user.image} alt="Profile" width={64} height={64} className="rounded-full" />}
             <div>
-              <h2 className="text-xl font-semibold text-brand-text">
-                Welcome back, {user.name}!
-              </h2>
-              <p className="text-gray-500">{user.email}</p>
-              
-              <div className="flex flex-wrap gap-2 mt-2">
-                {authStatus.hasOAuth && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                    Google OAuth
-                  </span>
-                )}
-                {authStatus.hasPassword && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                    Email & Password
-                  </span>
-                )}
-              </div>
+              <h2 className="text-xl font-bold text-gray-800">Welcome back, {user.name}!</h2>
+              <p className="text-gray-500">Here&apos;s a summary of your shop&apos;s status.</p>
             </div>
+        </div>
+
+        {needsPasswordSetup && <PasswordSetup />}
+        
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <OrderChart data={chartData} />
+            <LowStockWarning items={lowStockItems} />
           </div>
 
-          {authStatus.needsPasswordSetup && (
-            <div className="mb-6 p-4 rounded-lg bg-brand-secondary border border-gray-300">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-brand-primary" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3 flex-1">
-                  <h3 className="text-sm font-medium text-brand-text">
-                    Set up email & password sign-in
-                  </h3>
-                  <div className="mt-2 text-sm text-gray-700">
-                    <p>
-                      You&apos;re currently signed in with Google. Add a password to enable email sign-in as a backup option.
-                    </p>
-                  </div>
-                  <div className="mt-3">
-                    <a
-                      href="/auth/setup-password"
-                      className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-brand-primary hover:bg-brand-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 ring-brand-primary"
-                    >
-                      Set up password
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-lg bg-brand-secondary">
-              <h3 className="text-lg font-medium text-brand-text mb-2">
-                Getting Started
-              </h3>
-              <p className="text-gray-700">
-                Welcome to your new app! Start building your features here.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-lg bg-brand-secondary">
-              <h3 className="text-lg font-medium text-brand-text mb-2">
-                Authentication Status
-              </h3>
-              <p className="text-gray-700">
-                {authStatus.canUseMultipleSignIn 
-                  ? 'You can sign in with both Google and email/password!' 
-                  : authStatus.hasOAuth 
-                    ? 'Currently using Google OAuth sign-in.' 
-                    : 'Using email and password authentication.'
-                }
-              </p>
-            </div>
-
-            <div className="p-6 rounded-lg bg-brand-secondary">
-              <h3 className="text-lg font-medium text-brand-text mb-2">
-                Database Ready
-              </h3>
-              <p className="text-gray-700">
-                Prisma is set up and ready for your data models.
-              </p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <RestockSuggestions items={restockItems} />
+            <CustomerRequests initialRequests={customerRequests} />
           </div>
         </div>
       </div>
-    </div>
-  )
+    </>
+  );
 }

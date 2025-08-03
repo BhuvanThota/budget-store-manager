@@ -91,6 +91,8 @@ model Product {
   initialStock Int
   currentStock Int
   sellPrice    Float
+  stockThreshold Int @default(10)
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   
@@ -99,7 +101,7 @@ model Product {
 
   orderItems   OrderItem[]
 
-  @@unique([shopId, name]) // A product name must be unique within a shop
+  @@unique([shopId, name])
 }
 
 // UPDATE: Link Order to a Shop
