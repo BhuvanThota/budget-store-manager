@@ -127,7 +127,7 @@ export default function PosPage() {
                       >
                         <div className="p-3">
                           <div className="text-center">
-                            <h3 className="font-bold text-gray-800 text-xs leading-tight line-clamp-2 min-h-[2rem] mb-2">
+                            <h3 className="font-bold text-gray-800 text-md leading-tight line-clamp-2 min-h-[2rem]">
                               {product.name}
                             </h3>
                             <div className="space-y-1 mb-3">
@@ -196,7 +196,7 @@ export default function PosPage() {
                   >
                     <div className="p-4">
                       <div className="text-center">
-                        <h3 className="font-bold text-gray-800 leading-tight line-clamp-2 min-h-[2.5rem]">
+                        <h3 className="font-bold text-gray-800 text- leading-tight line-clamp-2 min-h-[2.5rem]">
                           {product.name}
                         </h3>
                         <div className="space-y-1 mb-3">
