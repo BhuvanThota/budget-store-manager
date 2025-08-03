@@ -24,6 +24,7 @@ export default function ReportsPage() {
 
   const [startDate, setStartDate] = useState(formatDateForInput(thirtyDaysAgo));
   const [endDate, setEndDate] = useState(formatDateForInput(today));
+  const [activePreset, setActivePreset] = useState<'Today' | 'Last 7 Days' | 'This Month' | 'Last 30 Days' | null>('Last 30 Days');
 
   const generateReport = async () => {
     setIsLoading(true);
@@ -76,24 +77,30 @@ export default function ReportsPage() {
             </div>
           </div>
            <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-              <button onClick={() => setDateRangeAndGenerate(new Date(), new Date())} className="bg-gray-200 p-2 rounded-md hover:bg-gray-300">Today</button>
               <button onClick={() => {
+                setActivePreset('Today');
+                setDateRangeAndGenerate(new Date(), new Date());
+                }} className={`bg-gray-200 p-2 rounded-md hover:bg-gray-300 ${activePreset === 'Today' ? 'bg-orange-200 font-bold' : ''}`}>Today</button>
+              <button onClick={() => {
+                setActivePreset('Last 7 Days');
                 const today = new Date();
                 const sevenDaysAgo = new Date();
                 sevenDaysAgo.setDate(today.getDate() - 7);
                 setDateRangeAndGenerate(sevenDaysAgo, today);
-              }} className="bg-gray-200 p-2 rounded-md hover:bg-gray-300">Last 7 Days</button>
+                }} className={`bg-gray-200 p-2 rounded-md hover:bg-gray-300 ${activePreset === 'Last 7 Days' ? 'bg-orange-200 font-bold' : ''}`}>Last 7 Days</button>
               <button onClick={() => {
+                setActivePreset('This Month');
                 const today = new Date();
                 const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
                 setDateRangeAndGenerate(firstDay, today);
-              }} className="bg-gray-200 p-2 rounded-md hover:bg-gray-300">This Month</button>
+                }} className={`bg-gray-200 p-2 rounded-md hover:bg-gray-300 ${activePreset === 'This Month' ? 'bg-orange-200 font-bold' : ''}`}>This Month</button>
               <button onClick={() => {
+                setActivePreset('Last 30 Days');
                   const today = new Date();
                   const thirtyDaysAgo = new Date();
                   thirtyDaysAgo.setDate(today.getDate() - 30);
                   setDateRangeAndGenerate(thirtyDaysAgo, today);
-              }} className="bg-gray-200 p-2 rounded-md hover:bg-gray-300">Last 30 Days</button>
+                }} className={`bg-gray-200 p-2 rounded-md hover:bg-gray-300 ${activePreset === 'Last 30 Days' ? 'bg-orange-200 font-bold' : ''}`}>Last 30 Days</button>
           </div>
           <button onClick={generateReport} disabled={isLoading} className="mt-6 w-full bg-brand-primary text-white py-2 px-4 rounded-md hover:bg-brand-primary/90 disabled:opacity-50">
             {isLoading ? 'Generating...' : 'Generate Report'}
