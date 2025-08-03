@@ -55,7 +55,6 @@ export default function SideMenu() {
       icon: <ClipboardList size={20} />,
       label: 'Orders',
       description: 'Sales & Transactions',
-      badge: 'Coming Soon'
     },
     {
       href: '/reports',
