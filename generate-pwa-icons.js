@@ -9,7 +9,7 @@ const path = require('path');
 
 // --- Configuration ---
 // 1. Path to your source image.
-const sourceImagePath = path.join(__dirname, 'public', 'logo-budget.png'); // <-- CHANGE 'logo.png' TO YOUR IMAGE FILE
+const sourceImagePath = path.join(__dirname, 'public', 'logo-budget-removebg.png'); // <-- CHANGE 'logo.png' TO YOUR IMAGE FILE
 
 // 2. Output directory for the icons.
 const outputDir = path.join(__dirname, 'public');
