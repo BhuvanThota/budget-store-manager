@@ -43,6 +43,23 @@ export default async function DashboardPage() {
     );
   }
 
+  const shop = await prisma.shop.findUnique({
+    where: { id: user.shopId },
+    select: { name: true },
+  });
+
+  if (!shop) {
+    return (
+      <>
+        <Navbar pageTitle="Dashboard" />
+        <div className="container mx-auto p-6">
+          <p>Error: Could not find a shop associated with your account.</p>
+        </div>
+      </>
+    );
+  }
+
+
   const hasOAuthAccount = user.accounts.some(account => account.provider !== 'credentials');
   const needsPasswordSetup = hasOAuthAccount && !user.password;
 
@@ -87,7 +104,7 @@ export default async function DashboardPage() {
         <div className="bg-white p-6 rounded-lg shadow-md flex items-center gap-4">
             {user.image && <Image src={user.image} alt="Profile" width={64} height={64} className="rounded-full" />}
             <div>
-              <h2 className="text-xl font-bold text-gray-800">Welcome back, {user.name}!</h2>
+              <h2 className="text-xl font-bold text-gray-800">Welcome back, {user.name}! <br/> {shop.name}</h2>
               <p className="text-gray-500">Here&apos;s a summary of your shop&apos;s status.</p>
             </div>
         </div>
