@@ -6,11 +6,13 @@ import Link from 'next/link';
 import {
   LayoutDashboard,
   Boxes,
-  ClipboardList,
+  Archive, // Changed from ClipboardList
   BarChart3,
-  ScanLine,
+  ShoppingCart, // Changed from ScanLine
   Menu,
-  X
+  X,
+  Store,      // Changed from Settings
+  Receipt     // New icon for Billing
 } from 'lucide-react';
 
 export default function SideMenu() {
@@ -40,27 +42,40 @@ export default function SideMenu() {
     },
     {
       href: '/pos',
-      icon: <ScanLine size={20} />,
-      label: 'Point of Sale',
+      icon: <ShoppingCart size={20} />,
+      label: 'Point of Sale (POS)',
       description: 'Create new sales'
     },
     {
       href: '/inventory',
       icon: <Boxes size={20} />,
-      label: 'Inventory',
+      label: 'Inventory Management',
       description: 'Manage Products & Stock'
     },
     {
       href: '/orders',
-      icon: <ClipboardList size={20} />,
-      label: 'Orders',
+      icon: <Archive size={20} />,
+      label: 'Orders Management',
       description: 'Sales & Transactions',
     },
     {
       href: '/reports',
       icon: <BarChart3 size={20} />,
-      label: 'Reports',
-      description: 'Business Analytics',
+      label: 'Reports & Analytics',
+      description: 'Business Analytics'
+    },
+    {
+      href: '/shop-settings',
+      icon: <Store size={20} />,
+      label: 'Shop Settings & Management',
+      description: 'Shop Details & Settings',
+      badge: 'Coming Soon'
+    },
+    {
+      href: '/order-billing',
+      icon: <Receipt size={20} />,
+      label: 'Order Billing',
+      description: 'Order Billing & Management',
       badge: 'Coming Soon'
     }
   ];
