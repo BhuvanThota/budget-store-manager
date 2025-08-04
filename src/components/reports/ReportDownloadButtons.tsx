@@ -9,6 +9,11 @@ import {
   generatePurchaseReportPDF,
   generateCombinedReports
 } from '@/lib/pdfReports';
+import {
+  generateSalesReportExcel,
+  generatePurchaseReportExcel,
+  generateCombinedExcelReport
+} from '@/lib/excelReports';
 
 // Purchase Report Data type (matching your existing structure)
 type PurchaseReportData = {
@@ -76,8 +81,11 @@ export default function ReportDownloadButtons({
     setIsGenerating(prev => ({ ...prev, excel: true }));
     
     try {
-      // We'll implement Excel download in the next step
-      alert('Excel download will be implemented next!');
+      if (reportType === 'sales' && salesData) {
+        await generateSalesReportExcel(salesData, startDate, endDate);
+      } else if (reportType === 'purchases' && purchaseData) {
+        await generatePurchaseReportExcel(purchaseData, startDate, endDate);
+      }
     } catch (error) {
       console.error('Error generating Excel:', error);
       alert('Failed to generate Excel report. Please try again.');
@@ -95,9 +103,16 @@ export default function ReportDownloadButtons({
     setIsGenerating(prev => ({ ...prev, combined: true }));
     
     try {
+      // Generate both PDF and Excel for combined report
       await generateCombinedReports(salesData, purchaseData, startDate, endDate);
+      
+      // Small delay to avoid browser blocking
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      await generateCombinedExcelReport(salesData, purchaseData, startDate, endDate);
+      
       // Show success message
-      alert('Successfully generated both Sales and Purchase reports!');
+      alert('Successfully generated combined reports (PDF + Excel)!');
     } catch (error) {
       console.error('Error generating combined reports:', error);
       alert('Failed to generate reports. Please try again.');
@@ -165,16 +180,16 @@ export default function ReportDownloadButtons({
             ) : (
               <FileText size={16} />
             )}
-            {isGenerating.combined ? 'Generating...' : 'Combined PDF'}
+            {isGenerating.combined ? 'Generating...' : 'Combined Reports'}
           </button>
         )}
       </div>
       
       <div className="text-xs text-gray-500 mt-2">
         <p>• PDF: Visual report with charts and formatted tables</p>
-        <p>• Excel: Raw data for further analysis (coming soon)</p>
+        <p>• Excel: Structured data across multiple sheets for analysis</p>
         {salesData && purchaseData && (
-          <p>• Combined: Complete business overview in one PDF</p>
+          <p>• Combined: Complete business overview (PDF + Excel)</p>
         )}
       </div>
     </div>
