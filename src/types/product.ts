@@ -1,21 +1,19 @@
 // src/types/product.ts
 
-// REFACTORED: This interface now matches the simplified Product model in schema.prisma
 export interface Product {
   id: string;
   name: string;
-  costPrice: number;
+  costPrice: number;       // Make sure this matches Prisma
   sellPrice: number;
-  totalStock: number;
+  totalStock: number;      // Make sure this matches Prisma
   currentStock: number;
   stockThreshold: number;
-  createdAt: string;
+  createdAt: string;       // Represent dates as strings or Date
   updatedAt: string;
   shopId: string;
 }
 
-// This interface is used for the Point of Sale system
 export interface CartItem extends Product {
   quantity: number;
-  costAtSale: number; // The costPrice of the item at the moment of sale
+  costAtSale: number;
 }

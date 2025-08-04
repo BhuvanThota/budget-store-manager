@@ -1,11 +1,16 @@
 // src/app/orders/page.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { ClipboardList, Trash2, Edit } from 'lucide-react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
+import { Dialog, Transition } from '@headlessui/react';
+import { ClipboardList } from 'lucide-react';
 import { Order } from '@/types/order';
 import EditOrderModal from '@/components/EditOrderModal';
 import OrderDetail from '@/components/OrderDetail';
+import ConfirmationModal from '@/components/ConfirmationModal';
+
+const formatDateForInput = (date: Date) => date.toISOString().split('T')[0];
+type Preset = 'Today' | 'Last 7 Days' | 'This Month' | 'Last 30 Days' | null;
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -13,39 +18,62 @@ export default function OrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return formatDateForInput(d);
+  });
+  const [endDate, setEndDate] = useState(formatDateForInput(new Date()));
+  const [activePreset, setActivePreset] = useState<Preset>('Last 30 Days');
+
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const deleteModalRef = useRef<HTMLDivElement>(null);
-  
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
 
-  // This effect now fetches data whenever the currentPage changes
-  useEffect(() => {
-    fetchOrders(currentPage);
-  }, [currentPage]);
-  
-  const fetchOrders = async (page: number) => {
+  const fetchOrders = useCallback(async (page: number) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/orders?page=${page}&limit=25`);
+      const res = await fetch(`/api/orders?page=${page}&limit=25&startDate=${startDate}&endDate=${endDate}`);
       const data = await res.json();
-      setOrders(data.orders);
-      setTotalPages(data.pagination.totalPages);
       
-      // Select the first order by default on desktop view
-      if (page === 1 && window.innerWidth >= 768 && data.orders.length > 0) {
-        setSelectedOrder(data.orders[0]);
-      } else if (data.orders.length === 0) {
+      if (!res.ok) {
+        if (res.status === 404) { setOrders([]); setTotalPages(1); setCurrentPage(1); } 
+        else { throw new Error(data.message || 'Failed to fetch orders'); }
+      } else {
+        setOrders(data.orders);
+        setTotalPages(data.pagination.totalPages);
+      }
+      
+      if (window.innerWidth >= 768) {
+        setSelectedOrder(prev => data.orders?.find((o: Order) => o.id === prev?.id) || data.orders?.[0] || null);
+      } else {
         setSelectedOrder(null);
       }
       
     } catch (error) {
       console.error('Failed to fetch orders', error);
+      setOrders([]);
     } finally {
       setIsLoading(false);
     }
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    fetchOrders(currentPage);
+  }, [currentPage, fetchOrders]);
+
+  const handlePresetClick = (preset: Preset, start: Date, end: Date) => {
+    setActivePreset(preset);
+    setStartDate(formatDateForInput(start));
+    setEndDate(formatDateForInput(end));
+    setCurrentPage(1);
   };
+
+  const buttonClass = (preset: Preset) => 
+    `bg-gray-200 p-2 rounded-md hover:bg-gray-300 transition-colors text-xs ${
+      activePreset === preset ? '!bg-brand-primary text-white' : ''
+    }`;
 
   const handleOrderSelect = (order: Order) => {
     setSelectedOrder(order);
@@ -56,176 +84,136 @@ export default function OrdersPage() {
 
   const handleEditClick = (order: Order) => {
     setSelectedOrder(order);
-    setIsMobileDetailOpen(false);
     setIsEditModalOpen(true);
   };
   
   const handleDeleteClick = (order: Order) => {
     setSelectedOrder(order);
-    setIsMobileDetailOpen(false);
     setIsDeleteModalOpen(true);
-  };
-
-  const closeDeleteModal = () => {
-    setIsDeleteModalOpen(false);
   };
   
   const confirmDelete = async () => {
     if (!selectedOrder) return;
-    try {
-      await fetch(`/api/orders/${selectedOrder.id}`, { method: 'DELETE' });
-      alert(`Order #${selectedOrder.orderId} deleted successfully.`);
-      setSelectedOrder(null);
-      fetchOrders(currentPage); // Refetch the current page
-    } catch (error) {
-      console.error('Failed to delete order', error);
-    } finally {
-      closeDeleteModal();
+    await fetch(`/api/orders/${selectedOrder.id}`, { method: 'DELETE' });
+    setIsDeleteModalOpen(false);
+    setIsMobileDetailOpen(false); // Close detail view on successful delete
+    
+    if (orders.length === 1 && currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    } else {
+      fetchOrders(currentPage);
     }
+  };
+
+  const handleSuccessfulSave = () => {
+    fetchOrders(currentPage);
+    setIsEditModalOpen(false);
+    setIsMobileDetailOpen(false); // Close detail view on successful save
   };
 
   if (isLoading && orders.length === 0) {
     return (
-      <div className="text-center py-10 flex items-center justify-center h-[calc(100vh-80px)]">
-        <div>
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading orders...</p>
+        <div className="flex items-center justify-center h-[calc(100vh-80px)]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
         </div>
-      </div>
-    );
-  }
-
-  if (!isLoading && orders.length === 0) {
-    return (
-      <div className="text-center py-10 flex items-center justify-center h-[calc(100vh-80px)]">
-        <div>
-            <div className="bg-gray-100 rounded-full w-24 h-24 mx-auto mb-4 flex items-center justify-center">
-            <ClipboardList size={48} className="text-gray-400" />
-            </div>
-            <h2 className="text-2xl font-semibold text-gray-700">No Orders Found</h2>
-            <p className="text-gray-500 mt-2">When you make a sale, it will appear here.</p>
-        </div>
-      </div>
     );
   }
 
   return (
     <>
-      <div className="mx-auto p-4 md:p-6 max-w-[1000px] h-[calc(100vh-80px)]">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
-          {/* Left Column: Orders List */}
-          <div className="flex flex-col h-full md:pr-2">
-            <div className="flex-grow overflow-y-auto space-y-4 pr-2">
-              {/* Mobile List View */}
-              <div className="md:hidden space-y-4">
-                {orders.map((order) => (
-                  <div key={order.id} className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
-                    <div className="flex justify-between items-start border-b pb-3 mb-3">
-                      <div>
-                        <h3 className="font-bold text-lg text-brand-primary">Order #{order.orderId}</h3>
-                        <p className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleString()}</p>
-                      </div>
-                      <p className="font-bold text-xl text-gray-800">₹{order.totalAmount.toFixed(2)}</p>
-                    </div>
-                    <ul className="space-y-1 mb-4">
-                      {order.items.map((item) => (
-                        <li key={item.id} className="flex justify-between text-sm text-gray-700">
-                          <span>{item.productName} &times; <span className="font-semibold">{item.quantity}</span></span>
-                          <span>₹{(item.quantity * item.soldAt).toFixed(2)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="flex items-center justify-end gap-3 mt-2 border-t pt-3">
-                        <button onClick={() => handleEditClick(order)} className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold flex items-center gap-1">
-                            <Edit size={12} /> EDIT
-                        </button>
-                        <button onClick={() => handleDeleteClick(order)} className="text-red-500 hover:text-red-700 text-xs font-semibold flex items-center gap-1">
-                            <Trash2 size={12} /> DELETE
-                        </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {/* Desktop List View */}
-              <div className="hidden md:block space-y-4">
-                 {orders.map((order) => (
-                    <button
-                        key={order.id}
-                        onClick={() => handleOrderSelect(order)}
-                        className={`w-full text-left bg-white p-4 rounded-lg shadow-md transition-all duration-200 border-2 ${
-                            selectedOrder?.id === order.id ? 'border-yellow-500 ring-2 ring-yellow-500/20' : 'border-transparent hover:border-brand-primary'
-                        }`}
-                    >
-                        <div className="flex justify-between items-center">
-                        <div>
-                            <h3 className="font-bold text-md text-brand-primary">Order #{order.orderId}</h3>
-                            <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleString()}</p>
-                        </div>
-                        <div className="font-bold text-lg text-gray-800">₹{order.totalAmount.toFixed(2)}</div>
-                        </div>
-                    </button>
-                ))}
-              </div>
+      <div className="mx-auto p-4 md:p-6 max-w-[1200px] h-[calc(100vh-80px)]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
+          {/* Left Column */}
+          <div className="md:col-span-1 flex flex-col h-full">
+            <div className="bg-white p-4 rounded-lg shadow-md mb-4 flex-shrink-0">
+                <h3 className="font-semibold text-gray-700 mb-2">Filter Orders</h3>
+                 <div className="space-y-2 mb-3">
+                    <input type="date" value={startDate} onChange={e => {setStartDate(e.target.value); setActivePreset(null);}} className="block w-full p-2 text-sm border border-gray-300 rounded-md" />
+                    <input type="date" value={endDate} onChange={e => {setEndDate(e.target.value); setActivePreset(null);}} className="block w-full p-2 text-sm border border-gray-300 rounded-md" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => handlePresetClick('Today', new Date(), new Date())} className={buttonClass('Today')}>Today</button>
+                    <button onClick={() => handlePresetClick('Last 7 Days', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), new Date())} className={buttonClass('Last 7 Days')}>Last 7 Days</button>
+                    <button onClick={() => handlePresetClick('This Month', new Date(new Date().getFullYear(), new Date().getMonth(), 1), new Date())} className={buttonClass('This Month')}>This Month</button>
+                    <button onClick={() => handlePresetClick('Last 30 Days', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date())} className={buttonClass('Last 30 Days')}>Last 30 Days</button>
+                </div>
             </div>
-            {totalPages > 1 && (
-              <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                <button onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md disabled:opacity-50">
-                  Previous
-                </button>
+            
+            <div className="flex-grow overflow-y-auto space-y-3 pr-2">
+              {!isLoading && orders.length === 0 ? (
+                <div className="text-center py-10 h-full flex flex-col justify-center">
+                    <ClipboardList size={48} className="mx-auto text-gray-400 mb-4" />
+                    <h3 className="font-semibold text-gray-700">No Orders Found</h3>
+                    <p className="text-gray-500 text-sm">There are no orders for this period.</p>
+                </div>
+              ) : (
+                orders.map((order) => (
+                  <button key={order.id} onClick={() => handleOrderSelect(order)}
+                      className={`w-full text-left bg-white p-3 rounded-lg shadow-sm transition-all duration-200 border-2 ${
+                          selectedOrder?.id === order.id && window.innerWidth >= 768 ? 'border-brand-primary ring-2 ring-brand-primary/20' : 'border-transparent hover:border-gray-300'
+                      }`}>
+                      <div className="flex justify-between items-center">
+                          <div>
+                              <h3 className="font-bold text-sm text-brand-primary">Order #{order.orderId}</h3>
+                              <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
+                          </div>
+                          <div className="font-semibold text-md text-gray-800">₹{order.totalAmount.toFixed(2)}</div>
+                      </div>
+                  </button>
+                ))
+              )}
+            </div>
+
+             {totalPages > 1 && (
+              <div className="flex justify-between items-center mt-4 pt-4 border-t flex-shrink-0">
+                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 text-sm bg-gray-200 rounded disabled:opacity-50">Prev</button>
                 <span className="text-sm text-gray-600">Page {currentPage} of {totalPages}</span>
-                <button onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md disabled:opacity-50">
-                  Next
-                </button>
+                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 text-sm bg-gray-200 rounded disabled:opacity-50">Next</button>
               </div>
             )}
           </div>
 
-          {/* Right Column: Order Details (Desktop Only) */}
-          <div className="hidden md:block h-full">
+          <div className="hidden md:block md:col-span-2 h-full">
               <OrderDetail order={selectedOrder} onEdit={handleEditClick} onDelete={handleDeleteClick} />
           </div>
         </div>
       </div>
 
-      {/* MODALS */}
-      {(isEditModalOpen || isDeleteModalOpen || isMobileDetailOpen) && (
-        <div className="fixed inset-0 bg-gray-500/30 backdrop-blur-sm z-40"></div>
-      )}
-
-      <EditOrderModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        onSave={() => fetchOrders(currentPage)}
-        orderToEdit={selectedOrder}
-      />
+      {/* --- MODALS --- */}
+      <EditOrderModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} onSave={handleSuccessfulSave} orderToEdit={selectedOrder} />
       
-      {isDeleteModalOpen && selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div ref={deleteModalRef} className="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
-            <h2 className="text-lg font-bold text-gray-800">Confirm Deletion</h2>
-            <p className="text-sm text-gray-600 mt-2 mb-4">
-              Are you sure you want to delete Order #{selectedOrder.orderId}?
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button onClick={closeDeleteModal} className="bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300">
-                Cancel
-              </button>
-              <button onClick={confirmDelete} className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700">
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Confirm Deletion"
+        message={`Are you sure you want to delete Order #${selectedOrder?.orderId}? This restores stock but cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+      />
 
-      {/* Mobile-only Order Detail Modal */}
-      {isMobileDetailOpen && selectedOrder && (
-         <div className="fixed md:hidden inset-0 z-50 flex items-end justify-center" onClick={() => setIsMobileDetailOpen(false)}>
-            <div className="relative bg-white w-full max-w-2xl h-[80vh] rounded-t-2xl shadow-2xl flex flex-col animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
-                <OrderDetail order={selectedOrder} onEdit={handleEditClick} onDelete={handleDeleteClick} isEmbedded={true} />
+      <Transition appear show={isMobileDetailOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-50 md:hidden" onClose={setIsMobileDetailOpen}>
+            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
+            </Transition.Child>
+            <div className="fixed inset-0 overflow-y-auto">
+                <div className="flex min-h-full items-center justify-center p-4 text-center">
+                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+                        <Dialog.Panel className="relative bg-white w-full max-w-lg h-[85vh] rounded-2xl shadow-2xl flex flex-col">
+                            <OrderDetail 
+                                order={selectedOrder} 
+                                onEdit={handleEditClick} 
+                                onDelete={handleDeleteClick} 
+                                isEmbedded={true}
+                                onClose={() => setIsMobileDetailOpen(false)}
+                            />
+                        </Dialog.Panel>
+                    </Transition.Child>
+                </div>
             </div>
-         </div>
-      )}
+        </Dialog>
+      </Transition>
     </>
   );
 }
