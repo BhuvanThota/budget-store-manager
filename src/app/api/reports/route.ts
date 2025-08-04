@@ -1,4 +1,6 @@
 // src/app/api/reports/route.ts
+// This endpoint now returns AGGREGATE/SUMMARY data for the sales report.
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -34,6 +36,7 @@ export async function GET(request: NextRequest) {
     const endDate = new Date(endDateStr);
     endDate.setUTCHours(23, 59, 59, 999);
 
+    // Fetch all orders in the range for calculation purposes
     const orders = await prisma.order.findMany({
       where: {
         shopId: user.shopId,
@@ -47,13 +50,22 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // If there are no orders, we can return a success response with zeroed data.
     if (orders.length === 0) {
-      return NextResponse.json(
-        { message: `No orders found for this period.` },
-        { status: 404 }
-      );
+      return NextResponse.json({
+          totalRevenue: 0,
+          totalProfit: 0,
+          totalOrders: 0,
+          averageOrderValue: 0,
+          topSellingProducts: [],
+          mostSoldItem: null,
+          busiestDay: null,
+          mostProfitableDay: null,
+          mostProfitableMonth: null,
+      });
     }
 
+    // --- Aggregation Logic ---
     let totalRevenue = 0;
     let totalProfit = 0;
     const salesByProduct: { [key: string]: number } = {};
@@ -87,11 +99,9 @@ export async function GET(request: NextRequest) {
     const topSellingProducts = sortedProducts.slice(0, 5).map(([name, quantity]) => ({ name, quantity }));
     const mostSoldItem = sortedProducts.length > 0 ? { name: sortedProducts[0][0], quantity: sortedProducts[0][1] } : null;
     
-    // Correctly type the `reduce` accumulator and parse keys to numbers
     const getTopEntry = (obj: { [key: number]: number }) => {
       const entries = Object.entries(obj);
       if (entries.length === 0) return null;
-      // FIX: Parse the keys back to numbers before comparison
       return entries.reduce((a, b) => 
         (obj[parseInt(a[0])] > obj[parseInt(b[0])] ? a : b)
       );
@@ -101,6 +111,7 @@ export async function GET(request: NextRequest) {
     const mostProfitableDayEntry = getTopEntry(profitByDay);
     const mostProfitableMonthEntry = getTopEntry(profitByMonth);
 
+    // --- Return the Summary Object ONLY ---
     return NextResponse.json({
       totalRevenue,
       totalProfit,
