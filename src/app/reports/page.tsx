@@ -13,6 +13,7 @@ import PerformanceInsights from '@/components/reports/PerformanceInsights';
 import TopProducts from '@/components/reports/TopProducts';
 import MetricCard from '@/components/reports/MetricCard';
 import ProductPurchaseBreakdown from '@/components/reports/ProductPurchaseBreakdown';
+import ReportDownloadButtons from '@/components/reports/ReportDownloadButtons';
 
 // Define the type for our Purchase Report Data
 type PurchaseReportData = {
@@ -61,6 +62,12 @@ export default function ReportsPage() {
   const [endDate, setEndDate] = useState(formatDateForInput(today));
   const [activePreset, setActivePreset] = useState<'Today' | 'Last 7 Days' | 'This Month' | 'Last 30 Days' | null>('Last 30 Days');
 
+  // Store both sales and purchase data for combined reports
+  const [allReportsData, setAllReportsData] = useState<{
+    sales?: SalesReportData;
+    purchases?: PurchaseReportData;
+  }>({});
+
   /**
    * TanStack Query Hook:
    * Replaces our manual useState for data, isLoading, and error.
@@ -81,7 +88,15 @@ export default function ReportsPage() {
 
   // Manually trigger the data fetch when the user clicks the button.
   const handleGenerateClick = () => {
-    refetch(); 
+    refetch().then((result) => {
+      // Store the data for combined reports
+      if (result.data) {
+        setAllReportsData(prev => ({
+          ...prev,
+          [reportType]: result.data
+        }));
+      }
+    });
     setActivePreset(null); // Clear active preset styling on custom generation.
   }
 
@@ -120,6 +135,18 @@ export default function ReportsPage() {
           <button onClick={handleGenerateClick} disabled={isGenerating} className="mt-6 w-full bg-brand-primary text-white py-2 px-4 rounded-md hover:bg-brand-primary/90 disabled:opacity-50">
             {isGenerating ? 'Generating...' : 'Generate Report'}
           </button>
+        </div>
+
+        {/* Download Section - NEW */}
+        <div className="mt-6">
+          <ReportDownloadButtons
+            reportType={reportType}
+            salesData={allReportsData.sales}
+            purchaseData={allReportsData.purchases}
+            startDate={startDate}
+            endDate={endDate}
+            isDataAvailable={!!reportData}
+          />
         </div>
       </div>
 
