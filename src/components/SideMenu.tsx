@@ -6,13 +6,14 @@ import Link from 'next/link';
 import {
   LayoutDashboard,
   Boxes,
-  Archive, // Changed from ClipboardList
+  Archive,
   BarChart3,
-  ShoppingCart, // Changed from ScanLine
+  ShoppingCart,
   Menu,
   X,
-  Store,      // Changed from Settings
-  Receipt     // New icon for Billing
+  Store,
+  Receipt,
+  Truck // Added new icon for Purchase Orders
 } from 'lucide-react';
 
 export default function SideMenu() {
@@ -53,10 +54,16 @@ export default function SideMenu() {
       description: 'Manage Products & Stock'
     },
     {
+      href: '/purchase-orders',
+      icon: <Truck size={20} />,
+      label: 'Purchase Orders',
+      description: 'Manage Stock Purchases',
+    },
+    {
       href: '/orders',
       icon: <Archive size={20} />,
-      label: 'Orders Management',
-      description: 'Sales & Transactions',
+      label: 'Sales Orders', // Renamed for clarity
+      description: 'Customer Transactions',
     },
     {
       href: '/reports',

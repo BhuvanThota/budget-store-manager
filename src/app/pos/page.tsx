@@ -34,7 +34,8 @@ export default function PosPage() {
   };
 
   const handleAddToCart = (product: Product) => {
-    const costAtSale = product.initialStock > 0 ? product.totalCost / product.initialStock : 0;
+    // FIX: Changed to use the new `costPrice` field directly.
+    const costAtSale = product.costPrice;
     setCart(prevCart => [...prevCart, { ...product, quantity: 1, costAtSale }]);
   };
 

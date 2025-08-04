@@ -1,8 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// prisma/schema.prisma - Finalized for Purchase Orders System
 
 generator client {
   provider = "prisma-client-js"
@@ -13,25 +9,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// NextAuth required models
+// --- Enums for controlled vocabularies ---
+enum PurchaseOrderStatus {
+  PENDING
+  RECEIVED
+  CANCELLED
+}
+
+// --- Core Models ---
+
 model Account {
-  id                String  @id @default(uuid())
+  id                String   @id @default(uuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?  @db.Text
   session_state     String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([provider, providerAccountId])
 }
 
@@ -54,8 +56,6 @@ model User {
   sessions      Session[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-
-  // A user can be a member of a shop
   shopId        String?
   shop          Shop?     @relation(fields: [shopId], references: [id])
 }
@@ -64,82 +64,109 @@ model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
-
   @@unique([identifier, token])
 }
 
-// NEW: Add the Shop model
 model Shop {
-  id        String    @id @default(uuid())
-  name      String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  // A shop can have many users (members)
-  members   User[]
-  // A shop has its own set of products, orders, and requests
-  products  Product[]
-  orders    Order[]
-  requests  Request[]
+  id             String          @id @default(uuid())
+  name           String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  members        User[]
+  products       Product[]
+  orders         Order[]
+  requests       Request[]
+  purchaseOrders PurchaseOrder[]
 }
 
-// UPDATE: Link Product to a Shop
+// --- Application Specific Models ---
+
+// REFINED: Product model - Simplified for clear inventory management
 model Product {
-  id           String @id @default(uuid())
-  name         String
-  totalCost    Float
-  initialStock Int
-  currentStock Int
-  sellPrice    Float
-  stockThreshold Int @default(10)
+  id             String @id @default(uuid())
+  name           String
+  costPrice      Float  @default(0) // Average cost price, will be updated by purchase orders
+  sellPrice      Float
+  totalStock     Int    @default(0) // Cumulative stock from all received purchase orders
+  currentStock   Int                 // Manually editable current stock level
+  stockThreshold Int    @default(10)
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
-  shopId       String
-  shop         Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
-  orderItems   OrderItem[]
+  // Relations
+  orderItems         OrderItem[]
+  purchaseOrderItems PurchaseOrderItem[]
 
   @@unique([shopId, name])
 }
 
-// UPDATE: Link Order to a Shop
-model Order {
-  id          String   @id @default(uuid())
-  orderId     Int      @default(autoincrement())
-  totalAmount Float
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  shopId      String
-  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  
-  items       OrderItem[]
+// NEW: PurchaseOrder model
+model PurchaseOrder {
+  id                String              @id @default(uuid())
+  purchaseOrderId   Int                 @default(autoincrement())
+  supplierDetails   String?             @db.VarChar(256)
+  totalAmount       Float
+  status            PurchaseOrderStatus @default(PENDING)
+  orderDate         DateTime            @default(now())
+  receivedDate      DateTime?
+  notes             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  shopId            String
+  shop              Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  items             PurchaseOrderItem[]
+  @@unique([shopId, purchaseOrderId])
+}
 
+// NEW & REFINED: PurchaseOrderItem model
+model PurchaseOrderItem {
+  id               String        @id @default(uuid())
+  productName      String        // Stored for historical accuracy
+  quantityOrdered  Int
+  quantityReceived Int           @default(0)
+  costPricePerItem Float         // Cost per individual item at time of purchase
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  purchaseOrderId String
+
+  // This relation is now REQUIRED. A purchase item MUST link to a product.
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productId String
+}
+
+// --- Existing Models (Unchanged) ---
+
+model Order {
+  id          String    @id @default(uuid())
+  orderId     Int       @default(autoincrement())
+  totalAmount Float
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  shopId      String
+  shop        Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  items       OrderItem[]
   @@unique([shopId, orderId])
 }
 
 model OrderItem {
-  id           String  @id @default(uuid())
-  quantity     Int
-  soldAt       Float
-  costAtSale   Float
-  
-  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderId      String
-  
-  product      Product @relation(fields: [productId], references: [id], onDelete: Restrict)
-  productId    String
-  productName  String
+  id          String  @id @default(uuid())
+  quantity    Int
+  soldAt      Float
+  costAtSale  Float
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId     String
+  product     Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productId   String
+  productName String
 }
 
-// UPDATE: Link Request to a Shop
 model Request {
   id        String   @id @default(uuid())
   item      String
   createdAt DateTime @default(now())
-
   shopId    String
   shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
 }
