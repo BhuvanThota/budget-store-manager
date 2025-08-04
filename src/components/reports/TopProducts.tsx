@@ -1,36 +1,31 @@
 // src/components/reports/TopProducts.tsx
-import { Star } from 'lucide-react';
-import { ReportData } from '@/types/report';
+
+import { ReportData as SalesSummaryData } from '@/types/report';
 
 interface TopProductsProps {
-  reportData: ReportData;
+  reportData: SalesSummaryData;
 }
 
 export default function TopProducts({ reportData }: TopProductsProps) {
+  const { topSellingProducts } = reportData;
+
+  if (!topSellingProducts || topSellingProducts.length === 0) {
+    return null; // Don't render the card if there's no data
+  }
+
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-2">Top 5 Selling Products</h3>
-      {reportData.mostSoldItem && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg mb-4">
-          <div className="flex items-center">
-            <div className="flex-shrink-0"><Star className="h-6 w-6 text-yellow-500" /></div>
-            <div className="ml-3">
-              <p className="text-sm font-semibold text-yellow-800">#1 Top Seller</p>
-              <p className="text-md text-yellow-700">{reportData.mostSoldItem.name} - <span className="font-bold">{reportData.mostSoldItem.quantity}</span> units</p>
-            </div>
-          </div>
-        </div>
-      )}
-      <ul className="space-y-2">
-        {reportData.topSellingProducts.length > 0 ? reportData.topSellingProducts.map(product => (
-          <li key={product.name} className="flex justify-between p-3 bg-gray-50 rounded-md text-sm">
-            <span className="font-medium text-gray-800">{product.name}</span>
-            <span className="text-gray-600">{product.quantity} units sold</span>
-          </li>
-        )) : (
-          <li className="p-3 bg-gray-50 rounded-md text-sm text-gray-500">No products sold in this period.</li>
-        )}
-      </ul>
+      <h3 className="text-lg font-bold text-gray-700 mb-2">Top Selling Products</h3>
+      <div className="p-4 border rounded-lg bg-white">
+        <ul className="space-y-3">
+          {topSellingProducts.map((product, index) => (
+            <li key={index} className="flex justify-between items-center text-sm">
+              <span className="font-medium text-gray-800">{product.name}</span>
+              <span className="font-semibold text-gray-600 bg-gray-100 px-2 py-1 rounded-md">{product.quantity} units</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
