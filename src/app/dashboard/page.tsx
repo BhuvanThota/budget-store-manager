@@ -13,7 +13,8 @@ import CustomerRequests from '@/components/dashboard/CustomerRequests';
 import OrderChart from '@/components/dashboard/OrderChart';
 import SuccessMessage from '@/components/SuccessMessage';
 import PasswordSetup from '@/components/dashboard/PasswordSetup';
-import CostCalculator from '@/components/dashboard/CostCalculator'; // Import the new component
+import CostCalculator from '@/components/dashboard/CostCalculator';
+import WorkflowNavigation from '@/components/dashboard/WorkflowNavigation'; // Import the new component
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -60,7 +61,6 @@ export default async function DashboardPage() {
     );
   }
 
-
   const hasOAuthAccount = user.accounts.some(account => account.provider !== 'credentials');
   const needsPasswordSetup = hasOAuthAccount && !user.password;
 
@@ -104,12 +104,19 @@ export default async function DashboardPage() {
         <div className="bg-white p-6 rounded-lg shadow-md flex items-center gap-4">
             {user.image && <Image src={user.image} alt="Profile" width={64} height={64} className="rounded-full" />}
             <div>
-              <h2 className="text-xl font-bold text-gray-800">Welcome back, {user.name}! <br/> {shop.name}</h2>
-              <p className="text-gray-500">Here&apos;s a summary of your shop&apos;s status.</p>
+              <h2 className="text-xl font-bold text-gray-800">
+                Welcome back, {user.name}!
+              </h2>
+              <p className="text-gray-500 mt-1">
+                Viewing dashboard for: <span className="font-semibold text-brand-primary">{shop?.name}</span>
+              </p>
             </div>
         </div>
 
         {needsPasswordSetup && <PasswordSetup />}
+        
+        {/* NEW: Workflow Navigation */}
+        <WorkflowNavigation />
         
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
