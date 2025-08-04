@@ -15,17 +15,17 @@ export async function PUT(
   if (!session?.user?.email) {
     return NextResponse.json({ message: 'Not authenticated' }, { status: 401 });
   }
-  
+
   try {
     const data = await request.json();
+    // REFACTORED: Updated to use the new simplified Product schema fields
     const updatedProduct = await prisma.product.update({
       where: { id: productId },
       data: {
         name: data.name,
-        totalCost: parseFloat(data.totalCost),
-        initialStock: parseInt(data.initialStock),
-        currentStock: data.currentStock,
+        costPrice: parseFloat(data.costPrice),
         sellPrice: parseFloat(data.sellPrice),
+        currentStock: parseInt(data.currentStock, 10),
         stockThreshold: parseInt(data.stockThreshold, 10),
       },
     });
@@ -49,6 +49,9 @@ export async function DELETE(
   }
 
   try {
+    // Before deleting a product, ensure it's not part of any purchase order items.
+    // Depending on business logic, you might want to prevent this or handle it differently.
+    // For now, we'll proceed with deletion as per the original logic.
     await prisma.product.delete({
       where: { id: productId },
     });

@@ -40,3 +40,44 @@ body {
 .hover\:bg-brand-primary-dark:hover {
   filter: brightness(90%);
 }
+
+/* Custom Scrollbar Styles */
+/* For Webkit-based browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 12px; /* Width of the entire scrollbar */
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1; /* Color of the tracking area */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c5c5c5; /* Color of the scroll thumb */
+  border-radius: 10px;
+  border: 3px solid #f1f1f1; /* Creates padding around thumb */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8; /* Color of the scroll thumb on hover */
+}
+
+/* For Firefox */
+.scrollbar-custom {
+  scrollbar-width: thin; /* "auto" or "thin" */
+  scrollbar-color: #c5c5c5 #f1f1f1; /* thumb and track color */
+}
+
+
+/* Hide number input arrows/spinners */
+/* For Chrome, Safari, Edge, Opera */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* For Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}

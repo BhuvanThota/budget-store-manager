@@ -4,13 +4,15 @@
 import { useState, useEffect, FormEvent, useRef } from 'react';
 import { Product } from '@/types/product';
 
+// REFINED: Simplified initial state for creating a new product
 const initialFormState = {
   id: '',
   name: '',
-  totalCost: '',
-  initialStock: '',
+  costPrice: '',
   sellPrice: '',
-  stockThreshold: '',
+  currentStock: '0',
+  totalStock: '0',
+  stockThreshold: '10',
 };
 
 interface AddEditProductModalProps {
@@ -18,36 +20,34 @@ interface AddEditProductModalProps {
   onClose: () => void;
   onSave: () => void;
   productToEdit: Product | null;
-  productToRestock: Partial<Product> | null; // New prop for restocking
-  allProducts: Product[];
+  productToRestock: Partial<Product> | null; 
 }
 
-export default function AddEditProductModal({ isOpen, onClose, onSave, productToEdit, productToRestock, allProducts }: AddEditProductModalProps) {
+export default function AddEditProductModal({ isOpen, onClose, onSave, productToEdit, productToRestock }: AddEditProductModalProps) {
   const [formData, setFormData] = useState(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   
   const isEditing = !!productToEdit;
-  const isRestocking = !!productToRestock && !productToEdit;
 
   useEffect(() => {
-    if (productToEdit) { // Editing existing item
-      setFormData({
-        id: productToEdit.id,
-        name: productToEdit.name,
-        totalCost: String(productToEdit.totalCost),
-        initialStock: String(productToEdit.initialStock),
-        sellPrice: String(productToEdit.sellPrice),
-        stockThreshold: String(productToEdit.stockThreshold),
-      });
-    } else if (productToRestock) { // Restocking (pre-filling a new item)
-      setFormData({
-        ...initialFormState,
-        name: productToRestock.name || '',
-        sellPrice: productToRestock.sellPrice ? String(productToRestock.sellPrice) : '',
-      });
-    } else { // Adding a completely new item
-      setFormData(initialFormState);
+    if (isOpen) {
+        if (productToEdit) { // Editing existing item (keeps all fields)
+          setFormData({
+            id: productToEdit.id,
+            name: productToEdit.name,
+            costPrice: String(productToEdit.costPrice),
+            sellPrice: String(productToEdit.sellPrice),
+            currentStock: String(productToEdit.currentStock),
+            totalStock: String(productToEdit.totalStock),
+            stockThreshold: String(productToEdit.stockThreshold),
+          });
+        } else { // Adding a new item (uses simplified state)
+          setFormData({
+              ...initialFormState,
+              name: productToRestock?.name || '',
+          });
+        }
     }
   }, [productToEdit, productToRestock, isOpen]);
   
@@ -60,37 +60,22 @@ export default function AddEditProductModal({ isOpen, onClose, onSave, productTo
     e.preventDefault();
     setIsSubmitting(true);
 
-    // When restocking, it's a POST, not a PUT
     const url = isEditing ? `/api/inventory/${formData.id}` : '/api/inventory';
     const method = isEditing ? 'PUT' : 'POST';
 
-    interface ProductPayload {
-      name: string;
-      totalCost: number;
-      initialStock: number;
-      sellPrice: number;
-      currentStock?: number;
-      stockThreshold?: number;
-    }
-
-    const payload: ProductPayload = {
-      name: formData.name,
-      totalCost: parseFloat(formData.totalCost),
-      initialStock: parseInt(formData.initialStock, 10),
-      sellPrice: parseFloat(formData.sellPrice),
-      stockThreshold: parseInt(formData.stockThreshold, 10),
+    // The payload for a new product is now much simpler
+    const payload = isEditing ? {
+        name: formData.name,
+        costPrice: parseFloat(formData.costPrice),
+        sellPrice: parseFloat(formData.sellPrice),
+        currentStock: parseInt(formData.currentStock, 10),
+        stockThreshold: parseInt(formData.stockThreshold, 10),
+    } : {
+        name: formData.name,
+        costPrice: parseFloat(formData.costPrice) || 0,
+        sellPrice: parseFloat(formData.sellPrice) || 0,
     };
     
-    // This logic now correctly handles both edits and restocks (which are just new items)
-    if (isEditing) {
-      const originalProduct = allProducts.find(p => p.id === formData.id);
-      if (originalProduct && originalProduct.initialStock === parseInt(formData.initialStock, 10)) {
-        payload.currentStock = originalProduct.currentStock;
-      } else {
-        payload.currentStock = parseInt(formData.initialStock, 10);
-      }
-    }
-
     try {
       await fetch(url, {
         method,
@@ -106,18 +91,6 @@ export default function AddEditProductModal({ isOpen, onClose, onSave, productTo
     }
   };
 
-  const formCostPerItem = parseFloat(formData.totalCost) > 0 && parseInt(formData.initialStock) > 0
-    ? parseFloat(formData.totalCost) / parseInt(formData.initialStock)
-    : 0;
-  
-  const formSellPrice = parseFloat(formData.sellPrice);
-  const formProfitMargin = formCostPerItem > 0 && formSellPrice > formCostPerItem
-    ? ((formSellPrice - formCostPerItem) / formCostPerItem) * 100
-    : 0;
-  const formLossMargin = formCostPerItem > 0 && formSellPrice < formCostPerItem
-    ? ((formCostPerItem - formSellPrice) / formCostPerItem) * 100
-    : 0;
-
   if (!isOpen) return null;
 
   return (
@@ -125,54 +98,52 @@ export default function AddEditProductModal({ isOpen, onClose, onSave, productTo
       <div ref={modalRef} className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
         <form onSubmit={handleSubmit} className="space-y-4">
           <h2 className="text-xl font-bold text-gray-700 border-b pb-2 mb-4">
-            {isEditing ? '✏️ Edit Product' : (isRestocking ? `📦 Restock: ${productToRestock?.name}` : '✨ Add New Product')}
+            {isEditing ? '✏️ Edit Product' : '✨ Add New Product'}
           </h2>
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-            <input type="text" id="name" name="name" value={formData.name} onChange={handleInputChange} required className="w-full p-2 border border-gray-300 rounded-md" readOnly={isRestocking}/>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Product Name <span className="text-red-500">*</span></label>
+            <input type="text" id="name" name="name" value={formData.name} onChange={handleInputChange} required className="w-full p-2 border border-gray-300 rounded-md" />
           </div>
-          <div>
-            <label htmlFor="totalCost" className="block text-sm font-medium text-gray-700 mb-1">Total Purchase Cost (₹)</label>
-            <input type="number" step="0.01" id="totalCost" name="totalCost" value={formData.totalCost} onChange={handleInputChange} required className="w-full p-2 border border-gray-300 rounded-md" />
-          </div>
-          <div>
-            <label htmlFor="initialStock" className="block text-sm font-medium text-gray-700 mb-1">Number of Items / Stock</label>
-            <input type="number" id="initialStock" name="initialStock" value={formData.initialStock} onChange={handleInputChange} required className="w-full p-2 border border-gray-300 rounded-md" />
-          </div>
-          {formCostPerItem > 0 && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-left">
-              <p className="text-sm font-medium text-blue-800">
-                Calculated cost per item: <span className="font-bold">₹{formCostPerItem.toFixed(2)}</span>
-              </p>
-            </div>
+          
+          {/* REFINED: These fields only show when editing an existing product */}
+          {isEditing ? (
+            <>
+              <div>
+                <label htmlFor="costPrice" className="block text-sm font-medium text-gray-700 mb-1">Cost Price (₹)</label>
+                <input type="number" step="0.01" id="costPrice" name="costPrice" value={formData.costPrice} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-md" />
+              </div>
+              <div>
+                <label htmlFor="sellPrice" className="block text-sm font-medium text-gray-700 mb-1">Selling Price (₹)</label>
+                <input type="number" step="0.01" id="sellPrice" name="sellPrice" value={formData.sellPrice} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-md" />
+              </div>
+              <div>
+                <label htmlFor="currentStock" className="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
+                <input type="number" id="currentStock" name="currentStock" value={formData.currentStock} readOnly className="w-full p-2 border rounded-md bg-gray-100" />
+              </div>
+              <div>
+                <label htmlFor="stockThreshold" className="block text-sm font-medium text-gray-700 mb-1">Stock Threshold</label>
+                <input type="number" id="stockThreshold" name="stockThreshold" value={formData.stockThreshold} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-md" />
+              </div>
+            </>
+          ) : (
+             <>
+              <div>
+                <label htmlFor="costPrice" className="block text-sm font-medium text-gray-700 mb-1">Initial Cost Price (Optional)</label>
+                <input type="number" step="0.01" id="costPrice" name="costPrice" value={formData.costPrice} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-md" />
+              </div>
+              <div>
+                <label htmlFor="sellPrice" className="block text-sm font-medium text-gray-700 mb-1">Initial Selling Price (Optional)</label>
+                <input type="number" step="0.01" id="sellPrice" name="sellPrice" value={formData.sellPrice} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-md" />
+              </div>
+             </>
           )}
-          <div>
-            <label htmlFor="sellPrice" className="block text-sm font-medium text-gray-700 mb-1">Selling Price per Item (₹)</label>
-            <input type="number" step="0.01" id="sellPrice" name="sellPrice" value={formData.sellPrice} onChange={handleInputChange} required className="w-full p-2 border border-gray-300 rounded-md" />
-          </div>
-          {formProfitMargin > 0 ? (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-md text-center">
-              <p className="text-sm font-medium text-green-800">
-                Profit Margin: <span className="font-bold">{formProfitMargin.toFixed(1)}%</span>
-              </p>
-            </div>
-          ) : formLossMargin > 0 && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-md text-center">
-              <p className="text-sm font-medium text-red-800">
-                Loss: <span className="font-bold">{formLossMargin.toFixed(1)}%</span>
-              </p>
-            </div>
-          )}
-          <div>
-            <label htmlFor="stockThreshold" className="block text-sm font-medium text-gray-700 mb-1">Stock Threshold</label>
-            <input type="number" id="stockThreshold" name="stockThreshold" value={formData.stockThreshold} onChange={handleInputChange} required className="w-full p-2 border border-gray-300 rounded-md" />
-          </div>
+
           <div className="flex justify-end space-x-3 pt-4">
             <button type="button" onClick={onClose} className="bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300">
               Cancel
             </button>
             <button type="submit" disabled={isSubmitting} className="bg-brand-primary text-white py-2 px-4 rounded-md hover:bg-brand-primary/90 disabled:opacity-50">
-              {isSubmitting ? 'Saving...' : (isEditing ? 'Update Product' : 'Add Product')}
+              {isSubmitting ? 'Saving...' : (isEditing ? 'Update Product' : 'Create Product')}
             </button>
           </div>
         </form>

@@ -51,15 +51,16 @@ export async function POST(req: Request) {
     }
 
     const data = await req.json();
-    
+
+    // REFINED: Only the name is required. Other fields are optional or have defaults.
     const newProduct = await prisma.product.create({
       data: {
         name: data.name,
-        totalCost: parseFloat(data.totalCost),
-        initialStock: parseInt(data.initialStock),
-        currentStock: parseInt(data.initialStock), // currentStock starts same as initial
-        sellPrice: parseFloat(data.sellPrice),
-        stockThreshold: parseInt(data.stockThreshold, 10),
+        costPrice: parseFloat(data.costPrice) || 0,
+        sellPrice: parseFloat(data.sellPrice) || 0,
+        totalStock: 0, // New products start with 0 stock
+        currentStock: 0, // New products start with 0 stock
+        // stockThreshold will use the default value from the schema (10)
         shopId: user.shopId,
       },
     });
@@ -67,6 +68,10 @@ export async function POST(req: Request) {
     return NextResponse.json(newProduct, { status: 201 });
   } catch (error) {
     console.error('Error creating product:', error);
+    // Check for unique constraint violation
+    if (error instanceof Error && 'code' in error && (error).code === 'P2002') {
+       return NextResponse.json({ message: `A product with the name "${(await req.json()).name}" already exists.` }, { status: 409 });
+    }
     return NextResponse.json({ message: 'Something went wrong' }, { status: 500 });
   }
 }

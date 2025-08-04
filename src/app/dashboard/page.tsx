@@ -13,6 +13,7 @@ import CustomerRequests from '@/components/dashboard/CustomerRequests';
 import OrderChart from '@/components/dashboard/OrderChart';
 import SuccessMessage from '@/components/SuccessMessage';
 import PasswordSetup from '@/components/dashboard/PasswordSetup';
+import CostCalculator from '@/components/dashboard/CostCalculator'; // Import the new component
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -27,8 +28,8 @@ export default async function DashboardPage() {
       name: true,
       email: true,
       image: true,
-      password: true, // Needed to check if a password is set
-      accounts: { select: { provider: true } } // Needed to check for OAuth accounts
+      password: true,
+      accounts: { select: { provider: true } }
     },
   });
 
@@ -100,7 +101,6 @@ export default async function DashboardPage() {
             <SuccessMessage />
         </Suspense>
         
-
         <div className="bg-white p-6 rounded-lg shadow-md flex items-center gap-4">
             {user.image && <Image src={user.image} alt="Profile" width={64} height={64} className="rounded-full" />}
             <div>
@@ -120,6 +120,11 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <RestockSuggestions items={restockItems} />
             <CustomerRequests initialRequests={customerRequests} />
+          </div>
+
+          {/* Add the calculator to its own row */}
+          <div className="grid grid-cols-1 gap-6">
+            <CostCalculator />
           </div>
         </div>
       </div>
