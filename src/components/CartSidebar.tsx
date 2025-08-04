@@ -122,11 +122,20 @@ export default function CartSidebar({
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 flex flex-row gap-2">
+            <button
+                onClick={handleClearCart}
+                disabled={isSubmitting}
+                className="w-[40%] h-[4rem] bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Trash2 size={16} />
+                Clear Cart
+              </button>
+
               <button
                 onClick={handleConfirmOrder}
                 disabled={isSubmitting}
-                className="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-3 px-4 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-[60%] h-[4rem] bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>
@@ -141,14 +150,7 @@ export default function CartSidebar({
                 )}
               </button>
               
-              <button
-                onClick={handleClearCart}
-                disabled={isSubmitting}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <Trash2 size={16} />
-                Clear Cart
-              </button>
+              
             </div>
           </div>
         </>

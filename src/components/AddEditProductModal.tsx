@@ -23,6 +23,13 @@ interface AddEditProductModalProps {
   productToRestock: Partial<Product> | null; 
 }
 
+// Helper function to capitalize first letter
+const capitalizeFirstLetter = (str: string): string => {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
+
+
 export default function AddEditProductModal({ isOpen, onClose, onSave, productToEdit, productToRestock }: AddEditProductModalProps) {
   const [formData, setFormData] = useState(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,7 +52,7 @@ export default function AddEditProductModal({ isOpen, onClose, onSave, productTo
         } else { // Adding a new item (uses simplified state)
           setFormData({
               ...initialFormState,
-              name: productToRestock?.name || '',
+              name: capitalizeFirstLetter(productToRestock?.name || ''),
           });
         }
     }
@@ -53,7 +60,12 @@ export default function AddEditProductModal({ isOpen, onClose, onSave, productTo
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    // Capitalize first letter for product name
+    if (name === 'name') {
+      setFormData((prev) => ({ ...prev, [name]: capitalizeFirstLetter(value) }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
