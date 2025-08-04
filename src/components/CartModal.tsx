@@ -66,41 +66,41 @@ export default function CartModal({
       {/* Modal */}
       <div 
         ref={modalRef} 
-        className="relative bg-white w-full sm:w-full sm:max-w-2xl h-[90vh] sm:h-[80vh] sm:rounded-2xl shadow-2xl flex flex-col animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300"
+        className="relative bg-white w-full sm:w-full sm:max-w-lg h-[85vh] sm:h-[75vh] sm:rounded-2xl shadow-2xl flex flex-col animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50 sm:rounded-t-2xl">
-          <div className="flex items-center gap-3">
-            <div className="bg-brand-primary rounded-full p-2">
-              <ShoppingCart size={20} className="text-white" />
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50 sm:rounded-t-2xl">
+          <div className="flex items-center gap-2">
+            <div className="bg-brand-primary rounded-full p-1.5">
+              <ShoppingCart size={16} className="text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-800">Shopping Cart</h2>
-              <p className="text-sm text-gray-600">
+              <h2 className="text-lg font-bold text-gray-800">Shopping Cart</h2>
+              <p className="text-xs text-gray-600">
                 {totalItems} {totalItems === 1 ? 'item' : 'items'} • {cartItems.length} {cartItems.length === 1 ? 'product' : 'products'}
               </p>
             </div>
           </div>
           <button 
             onClick={onClose} 
-            className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+            className="p-1.5 rounded-full hover:bg-gray-200 transition-colors"
             aria-label="Close cart"
           >
-            <X size={24} className="text-gray-600" />
+            <X size={20} className="text-gray-600" />
           </button>
         </div>
 
         {/* Cart Items */}
         {cartItems.length === 0 ? (
-          <div className="flex-grow flex flex-col items-center justify-center p-8 text-center">
-            <div className="bg-gray-100 rounded-full p-6 mb-4">
-              <ShoppingCart size={48} className="text-gray-400" />
+          <div className="flex-grow flex flex-col items-center justify-center p-6 text-center">
+            <div className="bg-gray-100 rounded-full p-4 mb-3">
+              <ShoppingCart size={36} className="text-gray-400" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">Your cart is empty</h3>
-            <p className="text-gray-500 mb-6">Add some products to get started</p>
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">Your cart is empty</h3>
+            <p className="text-gray-500 mb-4 text-sm">Add some products to get started</p>
             <button
               onClick={onClose}
-              className="bg-brand-primary text-white px-6 py-2 rounded-lg hover:bg-brand-primary/90 transition-colors"
+              className="bg-brand-primary text-white px-5 py-2 rounded-lg hover:bg-brand-primary/90 transition-colors text-sm"
             >
               Continue Shopping
             </button>
@@ -108,47 +108,47 @@ export default function CartModal({
         ) : (
           <>
             <div className="flex-grow overflow-y-auto">
-              <div className="p-4 space-y-3">
+              <div className="p-3 space-y-2">
                 {cartItems.map(item => (
-                  <div key={item.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                    <div className="flex items-start gap-4">
+                  <div key={item.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <div className="flex items-start gap-3">
                       {/* Product Info */}
                       <div className="flex-grow min-w-0">
-                        <h3 className="font-semibold text-gray-800 mb-1 line-clamp-2">
+                        <h3 className="font-semibold text-gray-800 mb-1 line-clamp-2 text-sm">
                           {item.name}
                         </h3>
-                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                        <div className="flex items-center gap-3 text-xs text-gray-600 mb-2">
                           <span>₹{item.sellPrice.toFixed(2)} each</span>
                           <span>Stock: {item.currentStock}</span>
                         </div>
                         
                         {/* Quantity Controls */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <button 
                             onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} 
-                            className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg w-8 h-8 flex items-center justify-center transition-colors"
+                            className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg w-6 h-6 flex items-center justify-center transition-colors"
                             disabled={isSubmitting}
                           >
-                            <Minus size={16} />
+                            <Minus size={12} />
                           </button>
                           
-                          <div className="bg-white border border-gray-300 rounded-lg px-3 py-1 min-w-[3rem] text-center">
-                            <span className="font-semibold text-gray-800">{item.quantity}</span>
+                          <div className="bg-white border border-gray-300 rounded-lg px-2 py-1 min-w-[2.5rem] text-center">
+                            <span className="font-semibold text-gray-800 text-sm">{item.quantity}</span>
                           </div>
                           
                           <button 
                             onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} 
-                            className="bg-brand-primary hover:bg-brand-primary/90 text-white rounded-lg w-8 h-8 flex items-center justify-center transition-colors"
+                            className="bg-brand-primary hover:bg-brand-primary/90 text-white rounded-lg w-6 h-6 flex items-center justify-center transition-colors"
                             disabled={isSubmitting || item.quantity >= item.currentStock}
                           >
-                            <Plus size={16} />
+                            <Plus size={12} />
                           </button>
                         </div>
                       </div>
 
                       {/* Price and Remove */}
                       <div className="text-right">
-                        <div className="font-bold text-lg text-gray-800 mb-2">
+                        <div className="font-bold text-gray-800 mb-2 text-sm">
                           ₹{(item.sellPrice * item.quantity).toFixed(2)}
                         </div>
                         <button
@@ -157,7 +157,7 @@ export default function CartModal({
                           disabled={isSubmitting}
                           title="Remove from cart"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
@@ -167,41 +167,41 @@ export default function CartModal({
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-200 bg-white p-6 sm:rounded-b-2xl">
+            <div className="border-t border-gray-200 bg-white p-4 sm:rounded-b-2xl">
               {/* Total */}
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-3">
                 <div className="text-gray-600">
                   <div className="text-sm">Total ({totalItems} items)</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-gray-800">₹{totalAmount.toFixed(2)}</div>
+                  <div className="text-xl font-bold text-gray-800">₹{totalAmount.toFixed(2)}</div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 <button
                   onClick={onClearCart}
                   disabled={isSubmitting}
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-4 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 px-3 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 text-sm"
                 >
-                  <Trash2 size={18} />
+                  <Trash2 size={14} />
                   Clear Cart
                 </button>
                 
                 <button
                   onClick={onConfirmOrder}
                   disabled={isSubmitting}
-                  className="flex-2 bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-3 px-6 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2 min-w-[140px]"
+                  className="flex-2 bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 min-w-[120px] text-sm"
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                       Processing...
                     </>
                   ) : (
                     <>
-                      <ShoppingCart size={18} />
+                      <ShoppingCart size={14} />
                       Complete Sale
                     </>
                   )}
@@ -209,7 +209,7 @@ export default function CartModal({
               </div>
 
               {/* Quick Info */}
-              <div className="mt-4 text-center text-xs text-gray-500">
+              <div className="mt-3 text-center text-xs text-gray-500">
                 Tap outside or press ESC to close
               </div>
             </div>

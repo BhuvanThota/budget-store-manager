@@ -4,8 +4,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Product } from '@/types/product';
 import CartModal, { CartItem } from '@/components/CartModal';
-import CartSidebar from '@/components/CartSidebar'; // Import the new component
-import { ShoppingCart, Plus, Minus } from 'lucide-react';
+import CartSidebar from '@/components/CartSidebar';
+import { ShoppingCart, Plus, Minus, Search, Package } from 'lucide-react';
 
 export default function PosPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -13,8 +13,18 @@ export default function PosPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const cartMap = useMemo(() => new Map(cart.map(item => [item.id, item])), [cart]);
+
+  // Filter products based on search query
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) return products.filter(p => p.currentStock > 0);
+    return products.filter(p => 
+      p.currentStock > 0 && 
+      p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [products, searchQuery]);
 
   useEffect(() => {
     fetchProducts();
@@ -34,7 +44,6 @@ export default function PosPage() {
   };
 
   const handleAddToCart = (product: Product) => {
-    // FIX: Changed to use the new `costPrice` field directly.
     const costAtSale = product.costPrice;
     setCart(prevCart => [...prevCart, { ...product, quantity: 1, costAtSale }]);
   };
@@ -92,6 +101,144 @@ export default function PosPage() {
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartTotal = cart.reduce((sum, item) => sum + item.sellPrice * item.quantity, 0);
 
+  // Loading state
+  const LoadingState = () => (
+    <div className="flex items-center justify-center py-12">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading products...</p>
+      </div>
+    </div>
+  );
+
+  // Empty state
+  const EmptyState = () => (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="bg-gray-100 rounded-full p-6 mb-4">
+        <Package size={48} className="text-gray-400" />
+      </div>
+      <h3 className="text-xl font-semibold text-gray-600 mb-2">
+        {searchQuery ? 'No products found' : 'No products available'}
+      </h3>
+      <p className="text-gray-500">
+        {searchQuery 
+          ? `No products match "${searchQuery}". Try a different search term.`
+          : 'Add products to your inventory to start selling.'
+        }
+      </p>
+      {searchQuery && (
+        <button
+          onClick={() => setSearchQuery('')}
+          className="mt-4 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-primary/90 transition-colors"
+        >
+          Clear Search
+        </button>
+      )}
+    </div>
+  );
+
+  // Desktop Product Card Component
+  const DesktopProductCard = ({ product }: { product: Product }) => {
+    const cartItem = cartMap.get(product.id);
+    return (
+      <div 
+        className={`bg-white rounded-lg shadow-md border transition-all duration-200 hover:shadow-lg ${
+          cartItem ? 'border-brand-primary ring-2 ring-brand-primary ring-opacity-20' : 'border-gray-200'
+        }`}
+      >
+        <div className="p-3">
+          <div className="text-center">
+            <h3 className="font-bold text-gray-800 text-md leading-tight line-clamp-2 min-h-[2rem]">
+              {product.name}
+            </h3>
+            <div className="space-y-1 mb-3">
+              <div className="text-sm font-bold text-brand-primary">₹{product.sellPrice.toFixed(2)}</div>
+              <div className="text-xs text-gray-500">Stock: {product.currentStock}</div>
+            </div>
+          </div>
+          {cartItem ? (
+            <div className="flex items-center justify-center gap-1">
+              <button 
+                onClick={() => handleUpdateQuantity(product.id, cartItem.quantity - 1)}
+                className="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-6 h-6 flex items-center justify-center transition-all active:scale-95 shadow-sm"
+              >
+                <Minus size={12} />
+              </button>
+              <div className="bg-gray-100 rounded-lg px-2 py-1 min-w-[2rem] text-center">
+                <span className="font-bold text-sm text-gray-800">{cartItem.quantity}</span>
+              </div>
+              <button 
+                onClick={() => handleUpdateQuantity(product.id, cartItem.quantity + 1)}
+                className="bg-brand-primary hover:bg-brand-primary/90 text-white rounded-full w-6 h-6 flex items-center justify-center transition-all active:scale-95 shadow-sm"
+              >
+                <Plus size={12} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => handleAddToCart(product)}
+              className="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2 px-2 rounded-lg transition-all active:scale-95 shadow-sm flex items-center justify-center gap-1 text-xs"
+            >
+              <Plus size={12} />
+              Add
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Mobile Product Card Component (Smaller)
+  const MobileProductCard = ({ product }: { product: Product }) => {
+    const cartItem = cartMap.get(product.id);
+    return (
+      <div 
+        className={`bg-white rounded-lg shadow-md border transition-all duration-200 hover:shadow-lg ${
+          cartItem ? 'border-brand-primary ring-2 ring-brand-primary ring-opacity-20' : 'border-gray-200'
+        }`}
+      >
+        <div className="p-2.5">
+          <div className="text-center">
+            <h3 className="font-bold text-gray-800 text-sm leading-tight line-clamp-2 min-h-[2rem]">
+              {product.name}
+            </h3>
+            <div className="space-y-1 mb-2">
+              <div className="text-sm font-bold text-brand-primary">₹{product.sellPrice.toFixed(2)}</div>
+              <div className="text-xs text-gray-500">Stock: {product.currentStock}</div>
+            </div>
+          </div>
+          {cartItem ? (
+            <div className="flex items-center justify-center gap-1.5">
+              <button 
+                onClick={() => handleUpdateQuantity(product.id, cartItem.quantity - 1)}
+                className="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-6 h-6 flex items-center justify-center transition-all active:scale-95 shadow-sm"
+              >
+                <Minus size={12} />
+              </button>
+              <div className="bg-gray-100 rounded-lg px-2 py-1 min-w-[2rem] text-center">
+                <span className="font-bold text-sm text-gray-800">{cartItem.quantity}</span>
+              </div>
+              <button 
+                onClick={() => handleUpdateQuantity(product.id, cartItem.quantity + 1)}
+                className="bg-brand-primary hover:bg-brand-primary/90 text-white rounded-full w-6 h-6 flex items-center justify-center transition-all active:scale-95 shadow-sm"
+              >
+                <Plus size={12} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => handleAddToCart(product)}
+              className="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-1.5 px-2 rounded-lg transition-all active:scale-95 shadow-sm flex items-center justify-center gap-1 text-xs"
+            >
+              <Plus size={12} />
+              Add
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       {/* Desktop Layout (760px+) */}
@@ -105,68 +252,38 @@ export default function PosPage() {
             handleUpdateQuantity={handleUpdateQuantity}
           />
         </div>
-        <div className="w-[60%] h-full">
-          <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-            <div className="p-6 pb-8">
+        <div className="w-[60%] h-full flex flex-col">
+          {/* Search Bar - Desktop */}
+          <div className="bg-white border-b rounded-lg p-4 shadow-sm">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+              />
+            </div>
+            {searchQuery && (
+              <div className="mt-2 text-sm text-gray-600">
+                {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found for &quot;{searchQuery}&quot;
+              </div>
+            )}
+          </div>
+
+          {/* Products Grid - Desktop */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            <div className="p-4">
               {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading products...</p>
-                  </div>
-                </div>
+                <LoadingState />
+              ) : filteredProducts.length === 0 ? (
+                <EmptyState />
               ) : (
                 <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
-                  {products.filter(p => p.currentStock > 0).map(product => {
-                    const cartItem = cartMap.get(product.id);
-                    return (
-                      <div 
-                        key={product.id} 
-                        className={`bg-white rounded-lg shadow-md border transition-all duration-200 hover:shadow-lg ${
-                          cartItem ? 'border-brand-primary ring-2 ring-brand-primary ring-opacity-20' : 'border-gray-200'
-                        }`}
-                      >
-                        <div className="p-3">
-                          <div className="text-center">
-                            <h3 className="font-bold text-gray-800 text-md leading-tight line-clamp-2 min-h-[2rem]">
-                              {product.name}
-                            </h3>
-                            <div className="space-y-1 mb-3">
-                              <div className="text-sm font-bold text-brand-primary">₹{product.sellPrice.toFixed(2)}</div>
-                              <div className="text-xs text-gray-500">Stock: {product.currentStock}</div>
-                            </div>
-                          </div>
-                          {cartItem ? (
-                            <div className="flex items-center justify-center gap-1">
-                              <button 
-                                onClick={() => handleUpdateQuantity(product.id, cartItem.quantity - 1)}
-                                className="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-6 h-6 flex items-center justify-center transition-all active:scale-95 shadow-sm"
-                              >
-                                <Minus size={12} />
-                              </button>
-                              <div className="bg-gray-100 rounded-lg px-2 py-1 min-w-[2rem] text-center">
-                                <span className="font-bold text-sm text-gray-800">{cartItem.quantity}</span>
-                              </div>
-                              <button 
-                                onClick={() => handleUpdateQuantity(product.id, cartItem.quantity + 1)}
-                                className="bg-brand-primary hover:bg-brand-primary/90 text-white rounded-full w-6 h-6 flex items-center justify-center transition-all active:scale-95 shadow-sm"
-                              >
-                                <Plus size={12} />
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => handleAddToCart(product)}
-                              className="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2 px-2 rounded-lg transition-all active:scale-95 shadow-sm flex items-center justify-center gap-1 text-xs"
-                            >
-                              <Plus size={12} />
-                              Add
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {filteredProducts.map(product => (
+                    <DesktopProductCard key={product.id} product={product} />
+                  ))}
                 </div>
               )}
             </div>
@@ -175,71 +292,44 @@ export default function PosPage() {
       </div>
 
       {/* Mobile Layout (<760px) */}
-      <div className="min-[760px]:hidden">
-        <div className="container mx-auto p-4 md:p-6 pb-32">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading products...</p>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {products.filter(p => p.currentStock > 0).map(product => {
-                const cartItem = cartMap.get(product.id);
-                return (
-                  <div 
-                    key={product.id} 
-                    className={`bg-white rounded-lg shadow-md border transition-all duration-200 hover:shadow-lg ${
-                      cartItem ? 'border-brand-primary ring-2 ring-brand-primary ring-opacity-20' : 'border-gray-200'
-                    }`}
-                  >
-                    <div className="p-4">
-                      <div className="text-center">
-                        <h3 className="font-bold text-gray-800 text- leading-tight line-clamp-2 min-h-[2.5rem]">
-                          {product.name}
-                        </h3>
-                        <div className="space-y-1 mb-3">
-                          <div className="text-lg font-bold text-brand-primary">₹{product.sellPrice.toFixed(2)}</div>
-                          <div className="text-sm text-gray-500">Stock: {product.currentStock}</div>
-                        </div>
-                      </div>
-                      {cartItem ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <button 
-                            onClick={() => handleUpdateQuantity(product.id, cartItem.quantity - 1)}
-                            className="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center transition-all active:scale-95 shadow-sm"
-                          >
-                            <Minus size={16} />
-                          </button>
-                          <div className="bg-gray-100 rounded-lg px-3 py-1 min-w-[3rem] text-center">
-                            <span className="font-bold text-lg text-gray-800">{cartItem.quantity}</span>
-                          </div>
-                          <button 
-                            onClick={() => handleUpdateQuantity(product.id, cartItem.quantity + 1)}
-                            className="bg-brand-primary hover:bg-brand-primary/90 text-white rounded-full w-8 h-8 flex items-center justify-center transition-all active:scale-95 shadow-sm"
-                          >
-                            <Plus size={16} />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleAddToCart(product)}
-                          className="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2.5 px-3 rounded-lg transition-all active:scale-95 shadow-sm flex items-center justify-center gap-2"
-                        >
-                          <Plus size={16} />
-                          Add to Cart
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+      <div className="min-[760px]:hidden flex flex-col h-[calc(100vh-80px)]">
+        {/* Search Bar - Mobile */}
+        <div className="bg-white border-b p-3 shadow-sm">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search products..."
+              className="w-full p-2.5 pl-9 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm"
+            />
+          </div>
+          {searchQuery && (
+            <div className="mt-2 text-xs text-gray-600">
+              {filteredProducts.length} result{filteredProducts.length !== 1 ? 's' : ''} for &quot;{searchQuery}&quot;
             </div>
           )}
         </div>
 
+        {/* Products Grid - Mobile */}
+        <div className="flex-1 overflow-y-auto pb-24">
+          <div className="p-3">
+            {isLoading ? (
+              <LoadingState />
+            ) : filteredProducts.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                {filteredProducts.map(product => (
+                  <MobileProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Floating Cart Button - Mobile */}
         {cart.length > 0 && (
           <div className="fixed bottom-6 right-6 z-30">
             <button
