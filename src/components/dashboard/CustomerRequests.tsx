@@ -12,35 +12,40 @@ interface CustomerRequestsProps {
 }
 
 export default function CustomerRequests({ initialRequests }: CustomerRequestsProps) {
-  const [requests, setRequests] = useState(initialRequests);
+  // REMOVED: No longer need internal state for the list itself.
+  // const [requests, setRequests] = useState(initialRequests);
   const [newItem, setNewItem] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
-  const handleAddRequest = async () => {
+  const handleAddRequest = async (e: React.FormEvent) => {
+    e.preventDefault(); // Use form submission for better accessibility (e.g., pressing Enter)
     if (!newItem.trim()) return;
     setIsSubmitting(true);
+    
     await fetch('/api/requests', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ item: newItem }),
     });
+
     setNewItem('');
-    router.refresh();
+    router.refresh(); // This will re-fetch data in the parent Server Component
     setIsSubmitting(false);
   };
 
   const handleDelete = async (id: string) => {
-    setRequests(currentRequests => currentRequests.filter(req => req.id !== id));
+    // Note: With this pattern, we don't do an optimistic update.
+    // We wait for the server to confirm the deletion.
     await fetch(`/api/requests/${id}`, { method: 'DELETE' });
-    router.refresh();
+    router.refresh(); // Re-fetch data to reflect the deletion
   };
 
   return (
     <DashboardCard title="Customer Requests" icon={<Lightbulb />}>
       <div className="flex flex-col h-full">
         <p className="text-sm text-gray-600 mb-4">Track items your customers are asking for.</p>
-        <div className="flex gap-2 mb-4">
+        <form onSubmit={handleAddRequest} className="flex gap-2 mb-4">
           <input
             type="text"
             value={newItem}
@@ -48,12 +53,13 @@ export default function CustomerRequests({ initialRequests }: CustomerRequestsPr
             placeholder="Enter requested item..."
             className="flex-grow p-2 border border-gray-300 rounded-md text-sm"
           />
-          <button onClick={handleAddRequest} disabled={isSubmitting} className="bg-brand-primary text-white py-2 px-3 rounded-md hover:bg-brand-primary/90 disabled:opacity-50 text-sm">
-            Add
+          <button type="submit" disabled={isSubmitting} className="bg-brand-primary text-white py-2 px-3 rounded-md hover:bg-brand-primary/90 disabled:opacity-50 text-sm">
+            {isSubmitting ? '...' : 'Add'}
           </button>
-        </div>
+        </form>
         <ul className="space-y-2 flex-grow max-h-48 overflow-y-auto pr-2">
-          {requests.length > 0 ? requests.map(req => (
+          {/* MODIFIED: Render directly from the 'initialRequests' prop */}
+          {initialRequests.length > 0 ? initialRequests.map(req => (
             <li key={req.id} className="flex justify-between items-center p-2 bg-blue-50 rounded-md text-sm">
               <span>{req.item}</span>
               <button onClick={() => handleDelete(req.id)} className="text-red-500 hover:text-red-700">
