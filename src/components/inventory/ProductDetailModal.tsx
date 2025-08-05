@@ -4,13 +4,14 @@
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Product } from '@/types/product';
-import { X, Save, AlertTriangle, TrendingUp, TrendingDown, Boxes, Edit3 } from 'lucide-react';
+import { X, Save, AlertTriangle, TrendingUp, TrendingDown, Boxes, Edit3, Trash2 } from 'lucide-react';
 
 interface ProductDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   product: Product | null;
   onSave: () => void;
+  onDelete: (productId: string) => void; // Prop to trigger deletion confirmation
 }
 
 // Helper function to capitalize first letter
@@ -19,7 +20,7 @@ const capitalizeFirstLetter = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
-export default function ProductDetailModal({ isOpen, onClose, product, onSave }: ProductDetailModalProps) {
+export default function ProductDetailModal({ isOpen, onClose, product, onSave, onDelete }: ProductDetailModalProps) {
   const [formData, setFormData] = useState<Partial<Product>>({});
   const [highestCostPrice, setHighestCostPrice] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -283,11 +284,10 @@ export default function ProductDetailModal({ isOpen, onClose, product, onSave }:
                 {/* Footer */}
                 <div className="border-t bg-gray-50 px-4 py-3">
                   <div className="flex gap-3">
-                    <button 
-                      onClick={onClose} 
-                      className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors"
-                    >
-                      Cancel
+                    {/* MODIFIED: This button now calls the onDelete prop */}
+                    <button onClick={() => onDelete(product.id)} className="w-1/3 bg-gray-200 hover:bg-red-100 text-red-700 font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors flex items-center justify-center gap-2">
+                      <Trash2 size={16} />
+                      Delete
                     </button>
                     <button
                       onClick={handleSave}

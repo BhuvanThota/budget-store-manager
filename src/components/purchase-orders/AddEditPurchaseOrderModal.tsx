@@ -1,9 +1,10 @@
 // src/components/purchase-orders/AddEditPurchaseOrderModal.tsx
 'use client';
 
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, Fragment, useCallback } from 'react';
 import { Combobox, Dialog, Transition } from '@headlessui/react';
-import { X, Trash2, XIcon, Equal } from 'lucide-react';
+import { X, Trash2, Save } from 'lucide-react';
+// FIX: Changed 'PurchaseOrderWithItems' to the correctly exported 'PurchaseOrder' type
 import { PurchaseOrder, CreatePurchaseOrderData } from '@/types/purchaseOrder';
 import { Product } from '@/types/product';
 
@@ -21,6 +22,7 @@ interface AddEditPurchaseOrderModalProps {
   onClose: () => void;
   onSave: () => void;
   allProducts: Product[];
+  // FIX: Use the 'PurchaseOrder' type for the prop
   orderToEdit: PurchaseOrder | null;
   initialProduct?: Product | null;
 }
@@ -35,6 +37,19 @@ export default function AddEditPurchaseOrderModal({ isOpen, onClose, onSave, all
 
   const isEditing = !!orderToEdit;
 
+  const handleAddItem = useCallback((product: Product) => {
+    if (!items.some(item => item.productId === product.id)) {
+      setItems(currentItems => [...currentItems, {
+        productId: product.id,
+        productName: product.name,
+        quantityOrdered: '1',
+        costPricePerItem: String(product.costPrice?.toFixed(2) || '0.00'),
+        totalCost: String(product.costPrice?.toFixed(2) || '0.00'),
+        lastEdited: 'perItem',
+      }]);
+    }
+  }, [items]);
+
   useEffect(() => {
     if (isOpen) {
       if (orderToEdit) {
@@ -44,53 +59,43 @@ export default function AddEditPurchaseOrderModal({ isOpen, onClose, onSave, all
           productId: item.productId,
           productName: item.productName,
           quantityOrdered: String(item.quantityOrdered),
-          costPricePerItem: String(Math.round(item.costPricePerItem)),
-          totalCost: String(item.quantityOrdered * Math.round(item.costPricePerItem)),
+          costPricePerItem: String(item.costPricePerItem.toFixed(2)),
+          totalCost: String((item.quantityOrdered * item.costPricePerItem).toFixed(2)),
           lastEdited: 'perItem',
         })));
       } else if (initialProduct) {
-         setItems([{
-            productId: initialProduct.id,
-            productName: initialProduct.name,
-            quantityOrdered: '1',
-            costPricePerItem: String(Math.round(initialProduct.costPrice || 0)),
-            totalCost: String(Math.round(initialProduct.costPrice || 0)),
-            lastEdited: 'perItem',
-        }]);
-        setSupplierDetails('');
-        setNotes('');
+         handleAddItem(initialProduct);
+         setSupplierDetails('');
+         setNotes('');
       } else {
         setItems([]);
         setSupplierDetails('');
         setNotes('');
       }
     }
-  }, [isOpen, orderToEdit, initialProduct]);
+  }, [isOpen, orderToEdit, initialProduct, handleAddItem]);
 
-    // --- NEW useEffect TO HANDLE SELECTION ---
-  // This effect runs when a user selects a product from the combobox.
   useEffect(() => {
     if (selectedProduct) {
       handleAddItem(selectedProduct);
-      // Reset the selection so the user can add another product.
       setSelectedProduct(null); 
     }
-  }, [selectedProduct]);
+  }, [selectedProduct, handleAddItem]);
 
   const handleItemChange = (productId: string, field: keyof FormItem, value: string) => {
     setItems(currentItems =>
       currentItems.map(item => {
         if (item.productId === productId) {
           const newItem = { ...item, [field]: value };
-          const qty = parseInt(newItem.quantityOrdered, 10) || 0;
+          const qty = parseFloat(newItem.quantityOrdered) || 0;
 
           if (field === 'costPricePerItem' || (field === 'quantityOrdered' && newItem.lastEdited === 'perItem')) {
-            const cost = parseInt(newItem.costPricePerItem, 10) || 0;
-            newItem.totalCost = String(qty * cost);
+            const cost = parseFloat(newItem.costPricePerItem) || 0;
+            newItem.totalCost = (qty * cost).toFixed(2);
             newItem.lastEdited = 'perItem';
           } else if (field === 'totalCost' || (field === 'quantityOrdered' && newItem.lastEdited === 'total')) {
-            const total = parseInt(newItem.totalCost, 10) || 0;
-            newItem.costPricePerItem = qty > 0 ? String(Math.round(total / qty)) : '0';
+            const total = parseFloat(newItem.totalCost) || 0;
+            newItem.costPricePerItem = qty > 0 ? (total / qty).toFixed(2) : '0.00';
             newItem.lastEdited = 'total';
           }
           return newItem;
@@ -98,20 +103,6 @@ export default function AddEditPurchaseOrderModal({ isOpen, onClose, onSave, all
         return item;
       })
     );
-  };
-
-  const handleAddItem = (product: Product) => {
-    if (!items.some(item => item.productId === product.id)) {
-      setItems([...items, {
-        productId: product.id,
-        productName: product.name,
-        quantityOrdered: '1',
-        costPricePerItem: String(Math.round(product.costPrice || 0)),
-        totalCost: String(Math.round(product.costPrice || 0)),
-        lastEdited: 'perItem',
-      }]);
-    }
-    setSearchQuery('');
   };
 
   const handleRemoveItem = (productId: string) => {
@@ -129,13 +120,11 @@ export default function AddEditPurchaseOrderModal({ isOpen, onClose, onSave, all
         productId: item.productId,
         productName: item.productName,
         quantityOrdered: parseInt(item.quantityOrdered, 10),
-        costPricePerItem: parseInt(item.costPricePerItem, 10),
+        costPricePerItem: parseFloat(item.costPricePerItem),
       })),
     };
 
     try {
-      // NOTE: This currently only supports creating new orders (POST).
-      // The edit functionality would require a PUT request to a dynamic route like `/api/purchase-orders/${orderToEdit.id}`
       const res = await fetch('/api/purchase-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -155,7 +144,7 @@ export default function AddEditPurchaseOrderModal({ isOpen, onClose, onSave, all
   };
 
   const filteredProducts = searchQuery === ''
-    ? allProducts
+    ? []
     : allProducts.filter(product =>
         product.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
@@ -170,96 +159,79 @@ export default function AddEditPurchaseOrderModal({ isOpen, onClose, onSave, all
         <div className="fixed inset-0 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4 text-center">
             <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-              <Dialog.Panel className="w-full max-w-3xl transform overflow-hidden rounded-2xl bg-white text-left align-middle shadow-xl transition-all flex flex-col p-4 sm:p-0">
-                
-                <div className="flex items-center justify-between border-b sm:p-6">
-                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900">
-                    {isEditing ? `Edit PO #${orderToEdit?.purchaseOrderId}` : 'Create Purchase Order'}
+              <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white text-left align-middle shadow-xl transition-all flex flex-col max-h-[90vh]">
+                <div className="flex items-center justify-between p-4 border-b">
+                  <Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
+                    {isEditing ? `Edit PO #${orderToEdit?.purchaseOrderId}` : 'New Purchase Order'}
                   </Dialog.Title>
-                  <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200"><X size={20} /></button>
+                  <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200"><X size={18} /></button>
                 </div>
                 
-                <div className="sm:p-6 max-h-[70vh] overflow-y-auto space-y-4">
-                  <div>
-                    <h4 className="font-semibold mb-2">Items</h4>
-                    <div className="space-y-3">
-                      {items.map(item => (
-                        <div key={item.productId} className="bg-blue-50 p-2 rounded-lg border ">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="font-semibold text-gray-800">{item.productName}</span>
-                            <button onClick={() => handleRemoveItem(item.productId)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={16} /></button>
-                          </div>
-                          <div className="flex flex-col sm:flex-row sm:items-end gap-1">
-                            <div className="flex-1">
-                              <label className="text-sm text-gray-500">Quantity</label>
-                              <input type="number" value={item.quantityOrdered} onChange={e => handleItemChange(item.productId, 'quantityOrdered', e.target.value)} className="w-full p-1.5 border rounded-md text-base" />
-                            </div>
-                            <div className="text-gray-400 sm:pt-5 h-6 flex items-center justify-center sm:h-auto"><XIcon size={16} /></div>
-                            <div className="flex-1">
-                              <label className="text-sm text-gray-500">Cost per Item (₹)</label>
-                              <input type="number" value={item.costPricePerItem} onChange={e => handleItemChange(item.productId, 'costPricePerItem', e.target.value)} className="w-full p-1.5 border rounded-md text-base" />
-                            </div>
-                            <div className="text-gray-400 font-semibold text-lg h-6 flex items-center justify-center sm:h-auto"><Equal size={16} /></div>
-                            <div className="flex-1">
-                              <label className="text-sm text-gray-500">Total Cost (₹)</label>
-                              <input type="number" value={item.totalCost} onChange={e => handleItemChange(item.productId, 'totalCost', e.target.value)} className="w-full p-1.5 border rounded-md text-base font-semibold" />
-                            </div>
-                          </div>
+                <div className="p-4 flex-grow overflow-y-auto space-y-4">
+                  <div className="space-y-3">
+                    {items.map(item => (
+                      <div key={item.productId} className="bg-gray-50 p-3 rounded-lg border">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-semibold text-sm text-gray-800">{item.productName}</span>
+                          <button onClick={() => handleRemoveItem(item.productId)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
                         </div>
-                      ))}
-                    </div>
-                    
-                    <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Add a product to this order</label>
-                      <Combobox value={selectedProduct} onChange={setSelectedProduct}>
-                        <div className="relative">
-                          <Combobox.Input
-                            className="w-full p-2 border border-gray-300 rounded-md"
-                            onChange={(event) => setSearchQuery(event.target.value)}
-                            placeholder="Search for an existing product..."
-                            autoComplete="off"
-                          />
-                          <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0" afterLeave={() => setSearchQuery('')}>
-                            <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                              {filteredProducts.length === 0 && searchQuery !== '' ? (
-                                <div className="relative cursor-default select-none py-2 px-4 text-gray-700">Nothing found.</div>
-                              ) : (
-                                filteredProducts.map((product) => (
-                                  <Combobox.Option key={product.id} value={product} className={({ active }) => `cursor-pointer select-none relative py-2 px-4 ${active ? 'bg-brand-primary text-white' : 'text-gray-900'}`}>
-                                    {product.name}
-                                  </Combobox.Option>
-                                ))
-                              )}
-                            </Combobox.Options>
-                          </Transition>
+                        <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="text-xs text-gray-500">Qty</label>
+                              <input type="number" value={item.quantityOrdered} onChange={e => handleItemChange(item.productId, 'quantityOrdered', e.target.value)} className="w-full p-2 border rounded-md text-sm" />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500">Cost/Item</label>
+                              <input type="number" value={item.costPricePerItem} onChange={e => handleItemChange(item.productId, 'costPricePerItem', e.target.value)} className="w-full p-2 border rounded-md text-sm" />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500">Total Cost</label>
+                              <input type="number" value={item.totalCost} onChange={e => handleItemChange(item.productId, 'totalCost', e.target.value)} className="w-full p-2 border rounded-md text-sm" />
+                            </div>
                         </div>
-                      </Combobox>
-                    </div>
+                      </div>
+                    ))}
                   </div>
-
-                  <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Supplier Details (Optional)</label>
-                      <input type="text" value={supplierDetails} onChange={e => setSupplierDetails(e.target.value)} className="mt-1 w-full p-2 border rounded-md" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Notes (Optional)</label>
-                      <input type="text" value={notes} onChange={e => setNotes(e.target.value)} className="mt-1 w-full p-2 border rounded-md" />
-                    </div>
+                  
+                  <div className="relative">
+                    <Combobox value={selectedProduct} onChange={setSelectedProduct}>
+                      <Combobox.Input
+                        className="w-full p-2 pl-4 border border-gray-300 rounded-md text-sm"
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        placeholder="Search to add a product..."
+                        autoComplete="off"
+                      />
+                      {filteredProducts.length > 0 && (
+                        <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg">
+                          {filteredProducts.map((product) => (
+                            <Combobox.Option key={product.id} value={product} className={({ active }) => `cursor-pointer select-none relative py-2 px-4 ${active ? 'bg-brand-primary text-white' : 'text-gray-900'}`}>
+                              {product.name}
+                            </Combobox.Option>
+                          ))}
+                        </Combobox.Options>
+                      )}
+                    </Combobox>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center mt-auto p-4 sm:p-6 border-t bg-gray-50 gap-4">
-                  <div className="text-center sm:text-left">
-                    <span className="text-sm text-gray-600">Total Amount:</span>
-                    <span className="text-xl font-bold ml-2">₹{overallTotalAmount.toFixed(2)}</span>
-                  </div>
-                  <div className="flex gap-3 justify-center sm:justify-end">
-                    <button onClick={onClose} className="bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
-                    <button onClick={handleSubmit} disabled={isSubmitting || items.length === 0} className="bg-brand-primary text-white py-2 px-4 rounded-lg hover:bg-brand-primary/90 disabled:opacity-50 flex items-center gap-2">
-                      {isSubmitting ? 'Saving...' : 'Save Purchase Order'}
-                    </button>
-                  </div>
+                <div className="p-4 border-t bg-gray-50 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" value={supplierDetails} onChange={e => setSupplierDetails(e.target.value)} placeholder="Supplier Details (Optional)" className="w-full p-2 border rounded-md text-sm" />
+                        <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes (Optional)" className="w-full p-2 border rounded-md text-sm" />
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <span className="text-sm text-gray-600">Total Amount:</span>
+                            <span className="text-xl font-bold ml-2 text-brand-text">₹{overallTotalAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex gap-3">
+                            <button onClick={onClose} className="bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 text-sm">Cancel</button>
+                            <button onClick={handleSubmit} disabled={isSubmitting || items.length === 0} className="bg-brand-primary text-white py-2 px-4 rounded-lg hover:bg-brand-primary/90 disabled:opacity-50 flex items-center gap-2 text-sm">
+                            <Save size={16} />
+                            {isSubmitting ? 'Saving...' : 'Save'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
               </Dialog.Panel>
             </Transition.Child>
