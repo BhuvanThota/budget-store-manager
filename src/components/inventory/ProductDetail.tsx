@@ -3,14 +3,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Product } from '@/types/product';
-import { Boxes, Save, AlertTriangle, TrendingUp, TrendingDown, Edit3 } from 'lucide-react';
+import { Boxes, Save, AlertTriangle, TrendingUp, TrendingDown, Edit3, DollarSign } from 'lucide-react';
 
 interface ProductDetailProps {
   product: Product | null;
   onSave: () => void;
 }
 
-// Helper function to capitalize first letter
 const capitalizeFirstLetter = (str: string): string => {
   if (!str) return str;
   return str.charAt(0).toUpperCase() + str.slice(1);
@@ -25,23 +24,19 @@ export default function ProductDetail({ product, onSave }: ProductDetailProps) {
   useEffect(() => {
     if (product) {
       setFormData(product);
-      // Fetch stats for the new product
       fetch(`/api/products/${product.id}/stats`)
         .then(res => res.json())
         .then(data => {
-          setHighestCostPrice(data.highestCostPrice || 0);
+          setHighestCostPrice(data.highestCostPrice || product.costPrice || 0);
         })
         .catch(() => {
-          // Fallback to product's costPrice if stats endpoint fails
-          setHighestCostPrice(product.costPrice);
+          setHighestCostPrice(product.costPrice || 0);
         });
     }
   }, [product]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    
-    // Capitalize first letter for product name
     if (name === 'name') {
       setFormData(prev => ({ ...prev, [name]: capitalizeFirstLetter(value) }));
     } else {
@@ -78,14 +73,12 @@ export default function ProductDetail({ product, onSave }: ProductDetailProps) {
       onSave();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Error saving product.');
-      console.error(error);
     } finally {
       setIsSaving(false);
       setTimeout(() => setMessage(''), 3000);
     }
   };
 
-  // Memoized calculation for profit/loss
   const profitLoss = useMemo(() => {
     const sell = Number(formData.sellPrice);
     const cost = Number(highestCostPrice);
@@ -115,175 +108,120 @@ export default function ProductDetail({ product, onSave }: ProductDetailProps) {
 
   return (
     <div className="bg-white h-full rounded-lg shadow-md flex flex-col">
-      <div className="p-6 border-b bg-gradient-to-r from-brand-primary/5 to-indigo-50">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 bg-brand-primary/10 rounded-lg flex items-center justify-center">
-            <Edit3 size={20} className="text-brand-primary" />
+      {/* MODIFIED: Reduced padding */}
+      <div className="p-4 border-b">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-brand-secondary/30 rounded-lg flex items-center justify-center">
+            <Edit3 size={18} className="text-brand-primary" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-brand-primary">Edit Product</h2>
-            <p className="text-sm text-gray-600">Manage product details, pricing and stock levels</p>
+            {/* MODIFIED: Reduced text size */}
+            <h2 className="text-xl font-bold text-brand-text">Edit Product</h2>
+            <p className="text-sm text-gray-500">Manage details, pricing, and stock levels</p>
           </div>
         </div>
       </div>
 
-      <div className="flex-grow p-6 space-y-6 overflow-y-auto">
+      {/* MODIFIED: Reduced padding and spacing */}
+      <div className="flex-grow p-4 space-y-4 overflow-y-auto">
         {message && (
-          <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${message.includes('successfully') ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>
+          <div className={`p-2.5 rounded-lg text-sm flex items-center gap-2 ${message.includes('successfully') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
             {message.includes('successfully') ? <TrendingUp size={16} /> : <AlertTriangle size={16} />}
             {message}
           </div>
         )}
         
-        {/* Product Name Section */}
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-            <Edit3 size={18} className="text-brand-primary" />
+        {/* MODIFIED: Reduced padding and text sizes */}
+        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+          <h3 className="text-md font-semibold text-gray-800 mb-2 flex items-center gap-2">
+            <Edit3 size={16} className="text-brand-primary" />
             Product Information
           </h3>
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="name" className="block text-xs font-medium text-gray-600 mb-1">
               Product Name <span className="text-red-500">*</span>
             </label>
             <input 
-              type="text" 
-              id="name" 
-              name="name" 
-              value={formData.name || ''} 
-              onChange={handleInputChange} 
-              required
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent" 
+              type="text" id="name" name="name" value={formData.name || ''} onChange={handleInputChange} required
+              className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-brand-primary focus:border-brand-primary" 
               placeholder="Enter product name..."
             />
           </div>
         </div>
 
-        {/* Pricing Section */}
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-            <TrendingUp size={18} className="text-green-600" />
-            Pricing Information
+        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+          <h3 className="text-md font-semibold text-gray-800 mb-2 flex items-center gap-2">
+            <DollarSign size={16} className="text-green-600" />
+            Pricing
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="sellPrice" className="block text-sm font-medium text-gray-700 mb-2">
-                Sell Price (₹)
-              </label>
+              <label htmlFor="sellPrice" className="block text-xs font-medium text-gray-600 mb-1">Sell Price (₹)</label>
               <input 
-                type="number" 
-                step="0.01" 
-                id="sellPrice" 
-                name="sellPrice" 
-                value={formData.sellPrice || ''} 
-                onChange={handleInputChange} 
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent" 
-                placeholder="0.00"
+                type="number" step="0.01" id="sellPrice" name="sellPrice" value={formData.sellPrice || ''} onChange={handleInputChange} 
+                className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-brand-primary focus:border-brand-primary" placeholder="0.00"
               />
             </div>
             <div>
-              <label htmlFor="highestCostPrice" className="block text-sm font-medium text-gray-700 mb-2">
-                Highest Cost Price (₹) <span className="text-xs text-gray-500">(Read-only)</span>
-              </label>
+              <label htmlFor="highestCostPrice" className="block text-xs font-medium text-gray-600 mb-1">Highest Cost (₹)</label>
               <input 
-                type="number" 
-                step="0.01" 
-                id="highestCostPrice" 
-                name="highestCostPrice" 
-                value={highestCostPrice.toFixed(2)} 
-                readOnly 
-                className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed" 
+                type="number" step="0.01" id="highestCostPrice" name="highestCostPrice" value={highestCostPrice.toFixed(2)} readOnly 
+                className="w-full p-2 text-sm border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" 
               />
             </div>
           </div>
           
-          {/* Profit/Loss Display */}
           {profitLoss && (
-            <div className={`mt-4 p-3 rounded-lg text-sm flex items-center gap-2 ${profitLoss.isProfit ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
-              {profitLoss.isProfit ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+            <div className={`mt-3 p-2 rounded-md text-xs flex items-center gap-2 ${profitLoss.isProfit ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              {profitLoss.isProfit ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
               <span>
                 {profitLoss.isProfit ? 'Profit' : 'Loss'}: 
-                <span className="font-bold"> ₹{profitLoss.value.toFixed(2)} </span>
-                ({profitLoss.percentage.toFixed(1)}%)
+                <span className="font-semibold"> ₹{profitLoss.value.toFixed(2)} </span>
+                ({profitLoss.percentage.toFixed(0)}%)
               </span>
             </div>
           )}
         </div>
 
-        {/* Stock Management Section */}
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-            <Boxes size={18} className="text-purple-600" />
-            Stock Management
+        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+          <h3 className="text-md font-semibold text-gray-800 mb-2 flex items-center gap-2">
+            <Boxes size={16} className="text-purple-600" />
+            Stock
           </h3>
-          
-          {/* Warning Message */}
-          <div className="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <AlertTriangle className="h-5 w-5 text-yellow-400" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-yellow-700">
-                  Adjust <span className="font-semibold">Current Stock</span> for manual changes. Use Purchase Orders to add new stock.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             <div>
-              <label htmlFor="currentStock" className="block text-sm font-medium text-gray-700 mb-2">
-                Current Stock
-              </label>
+              <label htmlFor="currentStock" className="block text-xs font-medium text-gray-600 mb-1">Current</label>
               <input 
-                type="number" 
-                id="currentStock" 
-                name="currentStock" 
-                value={formData.currentStock || ''} 
-                onChange={handleInputChange} 
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent" 
-                placeholder="0"
+                type="number" id="currentStock" name="currentStock" value={formData.currentStock || ''} onChange={handleInputChange} 
+                className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-brand-primary focus:border-brand-primary" placeholder="0"
               />
             </div>
             <div>
-              <label htmlFor="totalStock" className="block text-sm font-medium text-gray-700 mb-2">
-                Total Stock <span className="text-xs text-gray-500">(From purchases)</span>
-              </label>
+              <label htmlFor="totalStock" className="block text-xs font-medium text-gray-600 mb-1">Total</label>
               <input 
-                type="number" 
-                id="totalStock" 
-                name="totalStock" 
-                value={formData.totalStock || ''} 
-                readOnly 
-                className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed" 
+                type="number" id="totalStock" name="totalStock" value={formData.totalStock || ''} readOnly 
+                className="w-full p-2 text-sm border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" 
               />
             </div>
             <div>
-              <label htmlFor="stockThreshold" className="block text-sm font-medium text-gray-700 mb-2">
-                Stock Threshold
-              </label>
+              <label htmlFor="stockThreshold" className="block text-xs font-medium text-gray-600 mb-1">Threshold</label>
               <input 
-                type="number" 
-                id="stockThreshold" 
-                name="stockThreshold" 
-                value={formData.stockThreshold || ''} 
-                onChange={handleInputChange} 
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent" 
-                placeholder="10"
+                type="number" id="stockThreshold" name="stockThreshold" value={formData.stockThreshold || ''} onChange={handleInputChange} 
+                className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-brand-primary focus:border-brand-primary" placeholder="10"
               />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="p-6 border-t bg-gray-50">
+      <div className="p-4 border-t bg-gray-50">
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm hover:shadow-md"
+          className="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm hover:shadow-md"
         >
           <Save size={16} />
-          {isSaving ? 'Saving Changes...' : 'Save Changes'}
+          {isSaving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
     </div>

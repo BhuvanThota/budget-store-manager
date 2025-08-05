@@ -87,7 +87,7 @@ export default function InventoryPage() {
       </div>
 
       {/* Tablet & Desktop Layout */}
-      <div className="hidden md:flex h-[calc(100vh-80px)] p-6 gap-6">
+      <div className="hidden md:flex h-[calc(100vh-80px)] max-w-[1000px] mx-auto p-6 gap-6">
         <div className="w-[40%] lg:w-[30%] h-full">
            <ProductList
             products={filteredProducts}
