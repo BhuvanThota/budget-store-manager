@@ -67,9 +67,8 @@ export default function PurchaseOrdersPage() {
 
   return (
     <>
-      <div className="container mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Main Content Area */}
-        <div className="lg:col-span-2">
+      <div className="container mx-auto p-4 max-w-7xl">
+        <div>
           {/* Header and Search */}
           <div className="bg-white p-4 rounded-lg shadow-md mb-6">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
@@ -77,7 +76,6 @@ export default function PurchaseOrdersPage() {
                 <h1 className="text-xl md:text-2xl font-bold text-gray-800">Manage Purchases</h1>
                 <p className="text-sm md:text-base text-gray-500">Add purchases for existing products or create new ones.</p>
               </div>
-              {/* --- MODIFIED SECTION START --- */}
               <div className="w-full md:w-auto flex flex-col md:flex-row md:items-center gap-2">
                 <button
                   onClick={() => setIsAddProductModalOpen(true)}
@@ -97,13 +95,13 @@ export default function PurchaseOrdersPage() {
                   />
                 </div>
               </div>
-              {/* --- MODIFIED SECTION END --- */}
             </div>
           </div>
 
           {/* Product Grid */}
           {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            // --- MODIFIED GRID LAYOUT ---
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredProducts.map(product => (
                 <ProductPurchaseCard
                   key={product.id}
