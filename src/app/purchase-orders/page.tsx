@@ -72,21 +72,32 @@ export default function PurchaseOrdersPage() {
         <div className="lg:col-span-2">
           {/* Header and Search */}
           <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
               <div>
-                <h1 className="text-xl md:text-2xl font-bold text-gray-800">Manage Purchases / Add New Product</h1>
-                <p className="text-sm md:text-base text-gray-500">Add new product or view the history for any product.</p>
+                <h1 className="text-xl md:text-2xl font-bold text-gray-800">Manage Purchases</h1>
+                <p className="text-sm md:text-base text-gray-500">Add purchases for existing products or create new ones.</p>
               </div>
-              <div className="relative w-full md:w-2/5">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search or Add new product..."
-                  className="w-full p-2 pl-10 border border-gray-300 rounded-md"
-                />
+              {/* --- MODIFIED SECTION START --- */}
+              <div className="w-full md:w-auto flex flex-col md:flex-row md:items-center gap-2">
+                <button
+                  onClick={() => setIsAddProductModalOpen(true)}
+                  className="w-full md:w-auto bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 order-1 md:order-2"
+                >
+                  <PlusCircle size={18} />
+                  Add Product
+                </button>
+                <div className="relative w-full md:w-64 order-2 md:order-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search products..."
+                    className="w-full p-2 pl-10 border border-gray-300 rounded-md"
+                  />
+                </div>
               </div>
+              {/* --- MODIFIED SECTION END --- */}
             </div>
           </div>
 
@@ -121,7 +132,6 @@ export default function PurchaseOrdersPage() {
             </div>
           )}
         </div>
-
       </div>
 
       {/* Modals */}
