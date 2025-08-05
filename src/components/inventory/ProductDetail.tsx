@@ -3,11 +3,12 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Product } from '@/types/product';
-import { Boxes, Save, AlertTriangle, TrendingUp, TrendingDown, Edit3, DollarSign } from 'lucide-react';
+import { Boxes, Save, AlertTriangle, TrendingUp, TrendingDown, Edit3, DollarSign, Trash2 } from 'lucide-react';
 
 interface ProductDetailProps {
   product: Product | null;
   onSave: () => void;
+  onDelete: (productId: string) => void;
 }
 
 const capitalizeFirstLetter = (str: string): string => {
@@ -15,7 +16,7 @@ const capitalizeFirstLetter = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
-export default function ProductDetail({ product, onSave }: ProductDetailProps) {
+export default function ProductDetail({ product, onSave, onDelete }: ProductDetailProps) {
   const [formData, setFormData] = useState<Partial<Product>>({});
   const [highestCostPrice, setHighestCostPrice] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -108,21 +109,18 @@ export default function ProductDetail({ product, onSave }: ProductDetailProps) {
 
   return (
     <div className="bg-white h-full rounded-lg shadow-md flex flex-col">
-      {/* MODIFIED: Reduced padding */}
       <div className="p-4 border-b">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-brand-secondary/30 rounded-lg flex items-center justify-center">
             <Edit3 size={18} className="text-brand-primary" />
           </div>
           <div>
-            {/* MODIFIED: Reduced text size */}
             <h2 className="text-xl font-bold text-brand-text">Edit Product</h2>
             <p className="text-sm text-gray-500">Manage details, pricing, and stock levels</p>
           </div>
         </div>
       </div>
 
-      {/* MODIFIED: Reduced padding and spacing */}
       <div className="flex-grow p-4 space-y-4 overflow-y-auto">
         {message && (
           <div className={`p-2.5 rounded-lg text-sm flex items-center gap-2 ${message.includes('successfully') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
@@ -131,7 +129,6 @@ export default function ProductDetail({ product, onSave }: ProductDetailProps) {
           </div>
         )}
         
-        {/* MODIFIED: Reduced padding and text sizes */}
         <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
           <h3 className="text-md font-semibold text-gray-800 mb-2 flex items-center gap-2">
             <Edit3 size={16} className="text-brand-primary" />
@@ -214,16 +211,24 @@ export default function ProductDetail({ product, onSave }: ProductDetailProps) {
         </div>
       </div>
 
-      <div className="p-4 border-t bg-gray-50">
+      {/* FIX: Combined footer with both Delete and Save buttons */}
+      <div className="p-4 border-t bg-gray-50 flex gap-3">
+        <button
+          onClick={() => product && onDelete(product.id)}
+          className="w-1/3 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+        >
+          <Trash2 size={16} />
+          Delete
+        </button>
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm hover:shadow-md"
+          className="w-2/3 bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <Save size={16} />
           {isSaving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
-    </div>
+    </div>  
   );
 }

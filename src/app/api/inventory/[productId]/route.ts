@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 // PUT /api/inventory/[productId] - Update a product
 export async function PUT(
@@ -43,21 +44,20 @@ export async function DELETE(
 ) {
   const { productId } = await context.params;
   const session = await getServerSession(authOptions);
-
   if (!session?.user?.email) {
     return NextResponse.json({ message: 'Not authenticated' }, { status: 401 });
   }
 
   try {
-    // Before deleting a product, ensure it's not part of any purchase order items.
-    // Depending on business logic, you might want to prevent this or handle it differently.
-    // For now, we'll proceed with deletion as per the original logic.
     await prisma.product.delete({
       where: { id: productId },
     });
-    return NextResponse.json({ message: 'Product deleted successfully' }, { status: 200 });
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error(`Error deleting product ${productId}:`, error);
+    // Handle cases where deletion is not possible (e.g., product is in an order)
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      return NextResponse.json({ message: 'Cannot delete product because it is part of an existing order or purchase order.' }, { status: 409 });
+    }
     return NextResponse.json({ message: 'Something went wrong' }, { status: 500 });
   }
 }
