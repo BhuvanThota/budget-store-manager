@@ -3,7 +3,7 @@
 
 import { Product } from '@/types/product';
 import { Category } from '@/types/category';
-import { Search, Tag } from 'lucide-react'; // NEW: Import Tag
+import { Search, Tag, PlusCircle } from 'lucide-react'; // MODIFIED: Added PlusCircle
 
 interface ProductListProps {
   products: Product[];
@@ -14,8 +14,9 @@ interface ProductListProps {
   categories: Category[];
   selectedCategoryId: string;
   setSelectedCategoryId: (id: string) => void;
-  // NEW: Add prop to open the management modal
   onManageCategories: () => void;
+  // NEW: Add prop to open the Add Product modal
+  onAddProduct: () => void;
 }
 
 export default function ProductList({
@@ -27,10 +28,23 @@ export default function ProductList({
   categories,
   selectedCategoryId,
   setSelectedCategoryId,
-  onManageCategories, // NEW
+  onManageCategories,
+  onAddProduct, // NEW
 }: ProductListProps) {
   return (
     <div className="bg-white h-full md:rounded-lg shadow-md flex flex-col">
+      {/* NEW: Header for adding a new product */}
+      <div className="p-4 border-b">
+        <button
+          onClick={onAddProduct}
+          className="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+        >
+          <PlusCircle size={18} />
+          Add New Product
+        </button>
+      </div>
+
+      {/* Search and Filter Controls */}
       <div className="p-4 border-b space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -53,7 +67,6 @@ export default function ProductList({
               <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
           </select>
-          {/* NEW: Manage Categories Button */}
           <button
             onClick={onManageCategories}
             className="p-2 border border-gray-300 rounded-md hover:bg-gray-100"
@@ -64,6 +77,7 @@ export default function ProductList({
         </div>
       </div>
 
+      {/* Product List */}
       <div className="flex-grow overflow-y-auto scrollbar-custom">
         <ul className="space-y-1 p-2">
           {products.map((product) => (
