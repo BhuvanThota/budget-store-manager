@@ -26,10 +26,10 @@ We are continuing our work on the "Budget Store Manager" project. Please adopt t
     // ... rest of the code
   }
   ```
-* **Database Schema (`schema.prisma`)**: The schema is finalized for a purchase order system. Key points:
+* **Database Schema (`schema.prisma`)**: The schema is finalized for a purchase order system with categories. Key points:
   * The `Product` model has `costPrice` (average cost), `sellPrice`, `totalStock` (cumulative), and `currentStock` (adjustable). It also has a per-product `stockThreshold`.
+  * **A `Category` model is fully implemented** with an optional relationship to the `Product` model (products can have categories or be uncategorized).
   * A complete `PurchaseOrder` and `PurchaseOrderItem` system is in place with `PurchaseOrderStatus` enum.
-  * The `Category` model and its relation to `Product` have **not** been implemented yet.
   * Authentication supports both OAuth (Google) and credentials with password setup for OAuth users.
 
 ## **3. UI/UX Architecture & Patterns:**
@@ -58,12 +58,14 @@ We are continuing our work on the "Budget Store Manager" project. Please adopt t
 * Desktop: Side-by-side layout with product list and detail panel.
 * Mobile: List view with modal-based detail editing.
 * Detail view allows editing of `name`, `sellPrice`, `stockThreshold`, and `currentStock`. `costPrice` and `totalStock` are read-only.
+* **Full Category Management**: Includes a `ManageCategoriesModal` for full CRUD operations and a category filter on the product list. Allows for in-context category creation from product detail modals.
 * **High-Security Deletion**: Two-step confirmation (general confirmation modal + password verification modal).
 
 ### **Purchase Orders Page (`/purchase-orders`)**:
 * **Product-centric** design displaying a grid of product cards to initiate actions.
 * Primary workflow: Creating new `PurchaseOrder` records (immediate stock reception with `RECEIVED` status).
 * Secondary workflow: Creating new `Product` records on-the-fly.
+* **Category-Aware**: Displays category labels on product cards and includes a category filter to easily find products.
 * Uses `AddEditPurchaseOrderModal` with Combobox for product selection.
 * Includes `PurchaseHistoryModal` for viewing product purchase history.
 
@@ -71,6 +73,7 @@ We are continuing our work on the "Budget Store Manager" project. Please adopt t
 * Optimized for quick customer transactions.
 * Desktop: Split layout with cart sidebar and product grid.
 * Mobile: Product grid with floating cart button and `CartModal`.
+* **Category Filtering**: Includes a category filter to help cashiers quickly find items during sales.
 * Real-time stock validation and quantity controls.
 
 ### **Orders Page (`/orders`)**:
@@ -82,6 +85,7 @@ We are continuing our work on the "Budget Store Manager" project. Please adopt t
 ### **Reports Page (`/reports`)**:
 * Tabbed interface for Sales and Purchase reports using TanStack Query.
 * Master-detail layout with date controls and report display.
+* **Category-Based Analytics**: Features dedicated charts and tables to analyze sales revenue, profit, and purchase costs by category.
 * Advanced download system (`ReportDownloadButtons`) supporting PDF and Excel generation.
 * Uses `jsPDF` and `XLSX` libraries for report generation.
 
@@ -106,13 +110,22 @@ We are continuing our work on the "Budget Store Manager" project. Please adopt t
 * **Client State**: React state for UI interactions, cart management, and form handling
 * **No localStorage**: All state kept in memory due to Claude.ai artifact restrictions
 
-## **7. Key Development Patterns:**
+## **7. Category Management System:**
+
+* **Category Model**: Optional relationship with products - products can be categorized or remain uncategorized
+* **Full CRUD Operations**: Complete category management with create, read, update, delete functionality
+* **Cross-Platform Integration**: Category filtering and display across Inventory, Purchase Orders, and POS pages
+* **Analytics Integration**: Category-based reporting and insights in the Reports section
+* **User Experience**: In-context category creation and management without disrupting primary workflows
+
+## **8. Key Development Patterns:**
 
 * **Error Handling**: Consistent error boundaries and user-friendly messages
 * **Form Validation**: Client-side validation with server-side verification
 * **Responsive Design**: Mobile-first approach with progressive enhancement
 * **Performance**: Optimized images, code splitting, and efficient database queries
 * **Accessibility**: Proper ARIA labels, keyboard navigation, and color contrast
+* **Data Consistency**: Transactional operations for inventory updates and order processing
 
 Now, with this context established, let's begin. Our next task is:
 
