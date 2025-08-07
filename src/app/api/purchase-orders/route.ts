@@ -135,23 +135,13 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET /api/purchase-orders
- * Fetches purchase orders for reporting (this was missing from your original structure)
+ * Fetches all purchase orders for the authenticated user's shop.
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   const session = await getServerSession(authOptions);
-  
   if (!session?.user?.email) {
     return NextResponse.json({ message: 'Not authenticated' }, { status: 401 });
   }
-
-  const { searchParams } = new URL(request.url);
-  const startDateStr = searchParams.get('startDate');
-  const endDateStr = searchParams.get('endDate');
-  
-  // Pagination parameters
-  const page = parseInt(searchParams.get('page') || '1');
-  const limit = parseInt(searchParams.get('limit') || '25');
-  const skip = (page - 1) * limit;
 
   try {
     const user = await prisma.user.findUnique({
@@ -163,54 +153,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'Shop not found for user' }, { status: 404 });
     }
 
-    const whereClause: {
-      shopId: string;
-      createdAt?: {
-        gte: Date;
-        lte: Date;
-      };
-    } = {
-      shopId: user.shopId,
-    };
-
-    // Add date filtering if provided
-    if (startDateStr && endDateStr) {
-      const startDate = new Date(startDateStr);
-      startDate.setUTCHours(0, 0, 0, 0);
-
-      const endDate = new Date(endDateStr);
-      endDate.setUTCHours(23, 59, 59, 999);
-
-      whereClause.createdAt = {
-        gte: startDate,
-        lte: endDate,
-      };
-    }
-
-    // Fetch purchase orders with pagination
     const purchaseOrders = await prisma.purchaseOrder.findMany({
-      where: whereClause,
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: limit,
-      skip: skip,
+      where: { shopId: user.shopId },
       include: {
-        items: true,
+        items: {
+          include: {
+            product: true, // Include product details for each item
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc', // Show the most recent orders first
       },
     });
 
-    // Get total count for pagination
-    const totalOrders = await prisma.purchaseOrder.count({ where: whereClause });
-
-    return NextResponse.json({
-      purchaseOrders,
-      totalPages: Math.ceil(totalOrders / limit),
-      currentPage: page,
-    });
-
+    return NextResponse.json(purchaseOrders);
   } catch (error) {
-    console.error('Error fetching purchase orders:', error);
+    console.error('Failed to fetch purchase orders:', error);
     return NextResponse.json({ message: 'Something went wrong' }, { status: 500 });
   }
 }
