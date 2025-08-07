@@ -1,10 +1,13 @@
-// src/app/api/inventory/route.ts
+// src/app/api/categories/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-// GET /api/inventory - Fetch all products for the user's shop
+/**
+ * GET /api/categories
+ * Fetches all categories for the user's shop.
+ */
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -21,19 +24,22 @@ export async function GET() {
       return NextResponse.json({ message: 'Shop not found for user' }, { status: 404 });
     }
 
-    const products = await prisma.product.findMany({
+    const categories = await prisma.category.findMany({
       where: { shopId: user.shopId },
       orderBy: { name: 'asc' },
     });
 
-    return NextResponse.json(products);
+    return NextResponse.json(categories);
   } catch (error) {
-    console.error('Error fetching inventory:', error);
+    console.error('Error fetching categories:', error);
     return NextResponse.json({ message: 'Something went wrong' }, { status: 500 });
   }
 }
 
-// POST /api/inventory - Create a new product
+/**
+ * POST /api/categories
+ * Creates a new category for the user's shop.
+ */
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -50,28 +56,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Shop not found for user' }, { status: 404 });
     }
 
-    const data = await req.json();
+    const { name } = await req.json();
 
-    // MODIFIED: Include categoryId in the creation data if it exists
-    const newProduct = await prisma.product.create({
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return NextResponse.json({ message: 'Category name is required' }, { status: 400 });
+    }
+
+    const newCategory = await prisma.category.create({
       data: {
-        name: data.name,
-        costPrice: parseFloat(data.costPrice) || 0,
-        sellPrice: parseFloat(data.sellPrice) || 0,
-        totalStock: 0,
-        currentStock: 0,
+        name: name.trim(),
         shopId: user.shopId,
-        // Add categoryId if provided, otherwise it remains null
-        categoryId: data.categoryId || null,
       },
     });
 
-    return NextResponse.json(newProduct, { status: 201 });
+    return NextResponse.json(newCategory, { status: 201 });
   } catch (error) {
-    console.error('Error creating product:', error);
     if (error instanceof Error && 'code' in error && error.code === 'P2002') {
-       return NextResponse.json({ message: `A product with the name "${(await req.json()).name}" already exists.` }, { status: 409 });
+      return NextResponse.json({ message: 'A category with this name already exists.' }, { status: 409 });
     }
+    console.error('Error creating category:', error);
     return NextResponse.json({ message: 'Something went wrong' }, { status: 500 });
   }
 }

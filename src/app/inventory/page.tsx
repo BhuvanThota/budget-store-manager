@@ -1,55 +1,78 @@
 // src/app/inventory/page.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Product } from '@/types/product';
+import { Category } from '@/types/category';
 import ProductList from '@/components/inventory/ProductList';
 import ProductDetail from '@/components/inventory/ProductDetail';
 import ProductDetailModal from '@/components/inventory/ProductDetailModal';
 import ConfirmationModal from '@/components/ConfirmationModal';
-import SuccessModal from '@/components/SuccessModal'; // Import the new modal
-import PasswordConfirmationModal from '@/components/PasswordConfirmationModal'; // Import the new modal
+import SuccessModal from '@/components/SuccessModal';
+import PasswordConfirmationModal from '@/components/PasswordConfirmationModal';
 import { Boxes } from 'lucide-react';
+import ManageCategoriesModal from '@/components/inventory/ManageCategoriesModal'; // NEW: Import modal
 
 export default function InventoryPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+
   // Modal states
   const [isMobileDetailModalOpen, setIsMobileDetailModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false); // New state
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [isManageCategoriesModalOpen, setIsManageCategoriesModalOpen] = useState(false); // NEW: State for category modal
 
-  const fetchProducts = useCallback(async (postAction: 'select_first' | 'keep_selection' | 'clear_selection' = 'keep_selection') => {
+  const fetchInitialData = useCallback(async () => {
+    // Only set loading true on the very first fetch
     if (allProducts.length === 0) setIsLoading(true);
+    try {
+      const [productsRes, categoriesRes] = await Promise.all([
+        fetch('/api/inventory'),
+        fetch('/api/categories'),
+      ]);
+      const productsData = await productsRes.json();
+      const categoriesData = await categoriesRes.json();
+      
+      setAllProducts(productsData);
+      setCategories(categoriesData);
+      // Select first product only if one isn't already selected
+      if (!selectedProduct) {
+        setSelectedProduct(productsData[0] || null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch initial data', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [allProducts.length, selectedProduct]);
+
+  const refreshProducts = useCallback(async (postAction: 'keep_selection' | 'clear_selection' = 'keep_selection') => {
     try {
       const res = await fetch('/api/inventory');
       const data = await res.json();
       setAllProducts(data);
 
-      // FIX: Control how the selection is updated after fetching
-      if (postAction === 'select_first') {
-        setSelectedProduct(data[0] || null);
-      } else if (postAction === 'clear_selection') {
+      if (postAction === 'clear_selection') {
         setSelectedProduct(null);
-      } else { // 'keep_selection'
+      } else {
         setSelectedProduct(prev => data.find((p: Product) => p.id === prev?.id) || null);
       }
     } catch (error) {
-      console.error('Failed to fetch products', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to refresh products', error);
     }
-  }, [allProducts.length]);
+  }, []);
 
   useEffect(() => {
-    fetchProducts('select_first');
-  }, [fetchProducts]); // Remove fetchProducts from dependency array to only run once on mount
+    fetchInitialData();
+  }, []); // Note: We only want this to run once on mount. The dependency array is intentionally empty.
 
   const handleSelectProduct = (product: Product) => {
     setSelectedProduct(product);
@@ -67,53 +90,47 @@ export default function InventoryPage() {
   };
 
   const handleInitialDeleteConfirm = () => {
-    // This is step 2: User confirmed "Are you sure?"
     setIsDeleteModalOpen(false);
-    setIsPasswordModalOpen(true); // Open the password modal
+    setIsPasswordModalOpen(true);
   };
 
   const handleFinalDelete = async (password: string) => {
-    // This is step 3: User entered password and clicked confirm
     if (!productToDelete) return;
-
-    // First, verify the password
     const verifyRes = await fetch('/api/auth/verify-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),
     });
-
     if (!verifyRes.ok) {
       const errorData = await verifyRes.json();
       throw new Error(errorData.message || 'Password verification failed.');
     }
-
-    // If password is correct, proceed with deletion
     const deleteRes = await fetch(`/api/inventory/${productToDelete.id}`, { method: 'DELETE' });
     if (!deleteRes.ok) {
         throw new Error('Failed to delete the product after verification.');
     }
-
-    // If deletion is successful
     setIsPasswordModalOpen(false);
     setIsMobileDetailModalOpen(false);
-    
     setSuccessMessage(`Product "${productToDelete.name}" was successfully deleted.`);
     setIsSuccessModalOpen(true);
-    
     setProductToDelete(null);
-    fetchProducts('clear_selection');
+    await refreshProducts('clear_selection');
+    await fetchInitialData(); // Also refresh categories
   };
 
-
-  const handleSaveAndCloseMobile = () => {
-    fetchProducts();
+  const handleSaveAndCloseMobile = async () => {
+    await refreshProducts();
+    await fetchInitialData(); // Also refresh categories
     setIsMobileDetailModalOpen(false);
   };
   
-  const filteredProducts = allProducts.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = useMemo(() => {
+    return allProducts.filter(p => {
+      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = !selectedCategoryId || p.categoryId === selectedCategoryId;
+      return matchesSearch && matchesCategory;
+    });
+  }, [allProducts, searchQuery, selectedCategoryId]);
 
   if (isLoading) {
     return (
@@ -142,10 +159,14 @@ export default function InventoryPage() {
         <div className="md:hidden h-[calc(100vh-80px)]">
            <ProductList
             products={filteredProducts}
-            selectedProduct={null} // Don't show selection on mobile list
+            selectedProduct={null}
             onSelectProduct={handleSelectProduct}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
+            categories={categories}
+            selectedCategoryId={selectedCategoryId}
+            setSelectedCategoryId={setSelectedCategoryId}
+            onManageCategories={() => setIsManageCategoriesModalOpen(true)}
           />
         </div>
 
@@ -158,20 +179,30 @@ export default function InventoryPage() {
             onSelectProduct={setSelectedProduct}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
+            categories={categories}
+            selectedCategoryId={selectedCategoryId}
+            setSelectedCategoryId={setSelectedCategoryId}
+            onManageCategories={() => setIsManageCategoriesModalOpen(true)}
           />
           </div>
           <div className="w-[60%] lg:w-[70%] h-full">
             <ProductDetail 
               product={selectedProduct} 
-              onSave={() => fetchProducts()}
+              onSave={() => refreshProducts()}
               onDelete={handleOpenDeleteModal}
             />
           </div>
         </div>
       </div>
 
-       {/* MODAL: Mobile Product Detail */}
-       <ProductDetailModal
+      {/* NEW: Render the Manage Categories Modal */}
+      <ManageCategoriesModal
+        isOpen={isManageCategoriesModalOpen}
+        onClose={() => setIsManageCategoriesModalOpen(false)}
+        onUpdate={fetchInitialData}
+      />
+
+      <ProductDetailModal
         isOpen={isMobileDetailModalOpen}
         onClose={() => setIsMobileDetailModalOpen(false)}
         product={selectedProduct}
@@ -179,7 +210,6 @@ export default function InventoryPage() {
         onDelete={handleOpenDeleteModal}
       />
       
-      {/* MODAL 1: Initial "Are you sure?" Confirmation */}
       <ConfirmationModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
@@ -189,7 +219,6 @@ export default function InventoryPage() {
         confirmText="Yes, Continue"
       />
       
-      {/* MODAL 2: Password Confirmation */}
       <PasswordConfirmationModal
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
@@ -197,7 +226,6 @@ export default function InventoryPage() {
         title="Confirm Product Deletion"
       />
 
-      {/* MODAL 3: Success Message */}
       <SuccessModal
         isOpen={isSuccessModalOpen}
         onClose={() => setIsSuccessModalOpen(false)}

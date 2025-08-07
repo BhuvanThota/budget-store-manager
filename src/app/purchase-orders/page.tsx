@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Product } from '@/types/product';
+import { Category } from '@/types/category'; // NEW: Import Category
 import { PlusCircle, Search, Package } from 'lucide-react';
 import AddEditProductModal from '@/components/AddEditProductModal';
 import AddEditPurchaseOrderModal from '@/components/purchase-orders/AddEditPurchaseOrderModal';
@@ -11,8 +12,10 @@ import ProductPurchaseCard from '@/components/purchase-orders/ProductPurchaseCar
 
 export default function PurchaseOrdersPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]); // NEW: State for categories
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState(''); // NEW: State for category filter
 
   // Modal states
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
@@ -21,28 +24,36 @@ export default function PurchaseOrdersPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
-    fetchProducts();
+    fetchData();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchData = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/inventory');
-      const data = await res.json();
-      setAllProducts(data);
+      // NEW: Fetch products and categories simultaneously
+      const [productsRes, categoriesRes] = await Promise.all([
+        fetch('/api/inventory'),
+        fetch('/api/categories')
+      ]);
+      const productsData = await productsRes.json();
+      const categoriesData = await categoriesRes.json();
+      setAllProducts(productsData);
+      setCategories(categoriesData);
     } catch (error) {
-      console.error('Failed to fetch products', error);
+      console.error('Failed to fetch data', error);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // MODIFIED: Filtering logic now includes category
   const filteredProducts = useMemo(() => {
-    if (!searchQuery) return allProducts;
-    return allProducts.filter(p =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [allProducts, searchQuery]);
+    return allProducts.filter(p => {
+      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = !selectedCategoryId || p.categoryId === selectedCategoryId;
+      return matchesSearch && matchesCategory;
+    });
+  }, [allProducts, searchQuery, selectedCategoryId]);
 
   const handleOpenAddPurchaseModal = (product: Product) => {
     setSelectedProduct(product);
@@ -79,12 +90,25 @@ export default function PurchaseOrdersPage() {
               <div className="w-full md:w-auto flex flex-col md:flex-row md:items-center gap-2">
                 <button
                   onClick={() => setIsAddProductModalOpen(true)}
-                  className="w-full md:w-auto bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 order-1 md:order-2"
+                  className="w-full md:w-auto bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 order-1 md:order-3"
                 >
                   <PlusCircle size={18} />
                   Add Product
                 </button>
-                <div className="relative w-full md:w-64 order-2 md:order-1">
+                {/* NEW: Category Filter */}
+                <div className="relative w-full md:w-48 order-2 md:order-1">
+                  <select
+                    value={selectedCategoryId}
+                    onChange={(e) => setSelectedCategoryId(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">All Categories</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="relative w-full md:w-64 order-3 md:order-2">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                   <input
                     type="text"
@@ -100,7 +124,6 @@ export default function PurchaseOrdersPage() {
 
           {/* Product Grid */}
           {filteredProducts.length > 0 ? (
-            // --- MODIFIED GRID LAYOUT ---
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredProducts.map(product => (
                 <ProductPurchaseCard
@@ -118,14 +141,14 @@ export default function PurchaseOrdersPage() {
               </div>
               <h2 className="text-xl font-semibold text-gray-700">No Products Found</h2>
               <p className="text-gray-500 mt-2 mb-6">
-                No products match your search. Would you like to create it?
+                No products match your search or filter. Would you like to create a new one?
               </p>
               <button
                 onClick={() => setIsAddProductModalOpen(true)}
                 className="bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 mx-auto"
               >
                 <PlusCircle size={18} />
-                Create Product: &quot;{searchQuery}&quot;
+                Create New Product
               </button>
             </div>
           )}
@@ -136,7 +159,7 @@ export default function PurchaseOrdersPage() {
       <AddEditProductModal
         isOpen={isAddProductModalOpen}
         onClose={() => setIsAddProductModalOpen(false)}
-        onSave={fetchProducts}
+        onSave={fetchData}
         productToEdit={null}
         productToRestock={{ name: searchQuery }}
       />
@@ -144,7 +167,7 @@ export default function PurchaseOrdersPage() {
       <AddEditPurchaseOrderModal
         isOpen={isAddPurchaseModalOpen}
         onClose={() => setIsAddPurchaseModalOpen(false)}
-        onSave={fetchProducts}
+        onSave={fetchData}
         allProducts={allProducts}
         orderToEdit={null}
         initialProduct={selectedProduct}

@@ -2,7 +2,8 @@
 'use client';
 
 import { Product } from '@/types/product';
-import { Search } from 'lucide-react';
+import { Category } from '@/types/category';
+import { Search, Tag } from 'lucide-react'; // NEW: Import Tag
 
 interface ProductListProps {
   products: Product[];
@@ -10,6 +11,11 @@ interface ProductListProps {
   onSelectProduct: (product: Product) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  categories: Category[];
+  selectedCategoryId: string;
+  setSelectedCategoryId: (id: string) => void;
+  // NEW: Add prop to open the management modal
+  onManageCategories: () => void;
 }
 
 export default function ProductList({
@@ -18,11 +24,14 @@ export default function ProductList({
   onSelectProduct,
   searchQuery,
   setSearchQuery,
+  categories,
+  selectedCategoryId,
+  setSelectedCategoryId,
+  onManageCategories, // NEW
 }: ProductListProps) {
   return (
     <div className="bg-white h-full md:rounded-lg shadow-md flex flex-col">
-      {/* Search Header */}
-      <div className="p-4 border-b">
+      <div className="p-4 border-b space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           <input
@@ -33,9 +42,28 @@ export default function ProductList({
             className="w-full p-2 pl-10 border border-gray-300 rounded-md"
           />
         </div>
+        <div className="flex gap-2">
+          <select
+            value={selectedCategoryId}
+            onChange={(e) => setSelectedCategoryId(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md text-sm"
+          >
+            <option value="">All Categories</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+          {/* NEW: Manage Categories Button */}
+          <button
+            onClick={onManageCategories}
+            className="p-2 border border-gray-300 rounded-md hover:bg-gray-100"
+            title="Manage Categories"
+          >
+            <Tag size={20} className="text-gray-600" />
+          </button>
+        </div>
       </div>
 
-      {/* Product List - Updated classes for custom scrollbar */}
       <div className="flex-grow overflow-y-auto scrollbar-custom">
         <ul className="space-y-1 p-2">
           {products.map((product) => (

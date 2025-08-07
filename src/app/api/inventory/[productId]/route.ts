@@ -19,7 +19,7 @@ export async function PUT(
 
   try {
     const data = await request.json();
-    // REFACTORED: Updated to use the new simplified Product schema fields
+    // MODIFIED: Add categoryId to the data update object
     const updatedProduct = await prisma.product.update({
       where: { id: productId },
       data: {
@@ -28,6 +28,8 @@ export async function PUT(
         sellPrice: parseFloat(data.sellPrice),
         currentStock: parseInt(data.currentStock, 10),
         stockThreshold: parseInt(data.stockThreshold, 10),
+        // Update categoryId. If data.categoryId is null or undefined, it will be set to null.
+        categoryId: data.categoryId,
       },
     });
     return NextResponse.json(updatedProduct);

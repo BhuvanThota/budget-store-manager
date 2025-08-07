@@ -2,7 +2,7 @@
 'use client';
 
 import { Product } from '@/types/product';
-import { Plus, History } from 'lucide-react';
+import { Plus, History, Tag } from 'lucide-react'; // NEW: Imported Tag icon
 
 interface ProductPurchaseCardProps {
   product: Product;
@@ -14,6 +14,13 @@ export default function ProductPurchaseCard({ product, onAddPurchase, onViewHist
   return (
     <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 flex flex-col justify-between transition-all hover:shadow-lg hover:border-brand-primary">
       <div>
+        {/* NEW: Display Category if available */}
+        {product.category && (
+          <div className="flex items-center gap-1 text-xs text-brand-primary font-semibold mb-1">
+            <Tag size={12} />
+            <span>{product.category.name}</span>
+          </div>
+        )}
         <h3 className="font-bold text-gray-800 text-md leading-tight line-clamp-2 min-h-[2.5rem]">
           {product.name}
         </h3>

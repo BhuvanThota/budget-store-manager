@@ -3,41 +3,50 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Product } from '@/types/product';
+import { Category } from '@/types/category'; // NEW: Import Category
 import CartModal, { CartItem } from '@/components/CartModal';
 import CartSidebar from '@/components/CartSidebar';
-import { ShoppingCart, Plus, Minus, Search, Package } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Search, Package, Tag } from 'lucide-react'; // NEW: Import Tag
 
 export default function PosPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]); // NEW: State for categories
   const [isLoading, setIsLoading] = useState(true);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState(''); // NEW: State for category filter
 
   const cartMap = useMemo(() => new Map(cart.map(item => [item.id, item])), [cart]);
 
-  // Filter products based on search query
+  // MODIFIED: Filter products based on search and category
   const filteredProducts = useMemo(() => {
-    if (!searchQuery.trim()) return products.filter(p => p.currentStock > 0);
-    return products.filter(p => 
-      p.currentStock > 0 && 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [products, searchQuery]);
+    return products.filter(p => {
+      const inStock = p.currentStock > 0;
+      const matchesSearch = !searchQuery.trim() || p.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = !selectedCategoryId || p.categoryId === selectedCategoryId;
+      return inStock && matchesSearch && matchesCategory;
+    });
+  }, [products, searchQuery, selectedCategoryId]);
 
   useEffect(() => {
-    fetchProducts();
+    fetchInitialData();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchInitialData = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/inventory');
-      const data = await res.json();
-      setProducts(data);
+      const [productsRes, categoriesRes] = await Promise.all([
+        fetch('/api/inventory'),
+        fetch('/api/categories'),
+      ]);
+      const productsData = await productsRes.json();
+      const categoriesData = await categoriesRes.json();
+      setProducts(productsData);
+      setCategories(categoriesData);
     } catch (error) {
-      console.error('Failed to fetch products', error);
+      console.error('Failed to fetch initial data', error);
     } finally {
       setIsLoading(false);
     }
@@ -89,7 +98,7 @@ export default function PosPage() {
       alert('Order created successfully!');
       setCart([]);
       setIsCartOpen(false);
-      fetchProducts(); 
+      fetchInitialData();
     } catch (error) {
       console.error(error);
       alert('There was an error creating the order.');
@@ -101,7 +110,6 @@ export default function PosPage() {
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartTotal = cart.reduce((sum, item) => sum + item.sellPrice * item.quantity, 0);
 
-  // Loading state
   const LoadingState = () => (
     <div className="flex items-center justify-center py-12">
       <div className="text-center">
@@ -111,32 +119,23 @@ export default function PosPage() {
     </div>
   );
 
-  // Empty state
   const EmptyState = () => (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <div className="bg-gray-100 rounded-full p-6 mb-4">
         <Package size={48} className="text-gray-400" />
       </div>
       <h3 className="text-xl font-semibold text-gray-600 mb-2">
-        {searchQuery ? 'No products found' : 'No products available'}
+        {searchQuery || selectedCategoryId ? 'No products found' : 'No products available'}
       </h3>
       <p className="text-gray-500">
-        {searchQuery 
-          ? `No products match "${searchQuery}". Try a different search term.`
+        {searchQuery || selectedCategoryId
+          ? `No products match your search or filter. Try different criteria.`
           : 'Add products to your inventory to start selling.'
         }
       </p>
-      {searchQuery && (
-        <button
-          onClick={() => setSearchQuery('')}
-          className="mt-4 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-primary/90 transition-colors"
-        >
-          Clear Search
-        </button>
-      )}
     </div>
   );
-
+  
   // Desktop Product Card Component
   const DesktopProductCard = ({ product }: { product: Product }) => {
     const cartItem = cartMap.get(product.id);
@@ -253,8 +252,8 @@ export default function PosPage() {
           />
         </div>
         <div className="w-[60%] h-full flex flex-col">
-          {/* Search Bar - Desktop */}
-          <div className="bg-white border-b rounded-lg p-4 shadow-sm">
+          {/* MODIFIED: Search & Filter Bar - Desktop */}
+          <div className="bg-white border-b rounded-lg p-4 shadow-sm space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <input
@@ -265,14 +264,21 @@ export default function PosPage() {
                 className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
               />
             </div>
-            {searchQuery && (
-              <div className="mt-2 text-sm text-gray-600">
-                {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found for &quot;{searchQuery}&quot;
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <Tag size={16} className="text-gray-500" />
+              <select
+                value={selectedCategoryId}
+                onChange={(e) => setSelectedCategoryId(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md text-sm"
+              >
+                <option value="">Filter by category...</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* Products Grid - Desktop */}
           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
             <div className="p-4">
               {isLoading ? (
@@ -293,8 +299,8 @@ export default function PosPage() {
 
       {/* Mobile Layout (<760px) */}
       <div className="min-[760px]:hidden flex flex-col h-[calc(100vh-80px)]">
-        {/* Search Bar - Mobile */}
-        <div className="bg-white border-b p-3 shadow-sm">
+        {/* MODIFIED: Search & Filter Bar - Mobile */}
+        <div className="bg-white border-b p-3 shadow-sm space-y-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
@@ -305,14 +311,18 @@ export default function PosPage() {
               className="w-full p-2.5 pl-9 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent text-sm"
             />
           </div>
-          {searchQuery && (
-            <div className="mt-2 text-xs text-gray-600">
-              {filteredProducts.length} result{filteredProducts.length !== 1 ? 's' : ''} for &quot;{searchQuery}&quot;
-            </div>
-          )}
+          <select
+            value={selectedCategoryId}
+            onChange={(e) => setSelectedCategoryId(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md text-xs"
+          >
+            <option value="">All Categories</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
         </div>
 
-        {/* Products Grid - Mobile */}
         <div className="flex-1 overflow-y-auto pb-24">
           <div className="p-3">
             {isLoading ? (
@@ -329,7 +339,6 @@ export default function PosPage() {
           </div>
         </div>
 
-        {/* Floating Cart Button - Mobile */}
         {cart.length > 0 && (
           <div className="fixed bottom-6 right-6 z-30">
             <button
