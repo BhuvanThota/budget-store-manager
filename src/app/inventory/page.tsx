@@ -11,7 +11,8 @@ import ConfirmationModal from '@/components/ConfirmationModal';
 import SuccessModal from '@/components/SuccessModal';
 import PasswordConfirmationModal from '@/components/PasswordConfirmationModal';
 import { Boxes } from 'lucide-react';
-import ManageCategoriesModal from '@/components/inventory/ManageCategoriesModal'; // NEW: Import modal
+import ManageCategoriesModal from '@/components/inventory/ManageCategoriesModal';
+import AddEditProductModal from '@/components/AddEditProductModal'; // NEW: Import modal
 
 export default function InventoryPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -28,10 +29,10 @@ export default function InventoryPage() {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [isManageCategoriesModalOpen, setIsManageCategoriesModalOpen] = useState(false); // NEW: State for category modal
+  const [isManageCategoriesModalOpen, setIsManageCategoriesModalOpen] = useState(false);
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false); // NEW: State for add product modal
 
   const fetchInitialData = useCallback(async () => {
-    // Only set loading true on the very first fetch
     if (allProducts.length === 0) setIsLoading(true);
     try {
       const [productsRes, categoriesRes] = await Promise.all([
@@ -43,7 +44,6 @@ export default function InventoryPage() {
       
       setAllProducts(productsData);
       setCategories(categoriesData);
-      // Select first product only if one isn't already selected
       if (!selectedProduct) {
         setSelectedProduct(productsData[0] || null);
       }
@@ -72,7 +72,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     fetchInitialData();
-  }, []); // Note: We only want this to run once on mount. The dependency array is intentionally empty.
+  }, [fetchInitialData]);
 
   const handleSelectProduct = (product: Product) => {
     setSelectedProduct(product);
@@ -115,12 +115,12 @@ export default function InventoryPage() {
     setIsSuccessModalOpen(true);
     setProductToDelete(null);
     await refreshProducts('clear_selection');
-    await fetchInitialData(); // Also refresh categories
+    await fetchInitialData();
   };
 
   const handleSaveAndCloseMobile = async () => {
     await refreshProducts();
-    await fetchInitialData(); // Also refresh categories
+    await fetchInitialData();
     setIsMobileDetailModalOpen(false);
   };
   
@@ -132,6 +132,16 @@ export default function InventoryPage() {
     });
   }, [allProducts, searchQuery, selectedCategoryId]);
 
+  // NEW: Handler to open the add product modal
+  const handleAddProduct = () => {
+    setIsAddProductModalOpen(true);
+  };
+  
+  // NEW: Handler for when a new product is saved
+  const handleProductSaved = () => {
+    fetchInitialData();
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-80px)]">
@@ -141,12 +151,19 @@ export default function InventoryPage() {
   }
   
   if (allProducts.length === 0 && !isLoading) {
+    // MODIFIED: Show a different message if there are no products, and include the add product button
     return (
       <div className="flex items-center justify-center h-[calc(100vh-80px)] text-center px-4">
         <div>
           <Boxes size={48} className="text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold text-gray-700">No Products in Inventory</h2>
-          <p className="text-gray-500 mt-2">Go to the Purchase Orders page to add your first batch of stock.</p>
+          <h2 className="text-2xl font-semibold text-gray-700">Your Inventory is Empty</h2>
+          <p className="text-gray-500 mt-2 mb-6">Get started by adding your first product.</p>
+          <button
+            onClick={handleAddProduct}
+            className="bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2 px-5 rounded-lg transition-colors flex items-center justify-center gap-2 mx-auto"
+          >
+            Add First Product
+          </button>
         </div>
       </div>
     );
@@ -155,7 +172,6 @@ export default function InventoryPage() {
   return (
     <>
       <div className="mx-auto max-w-[1000px]">
-        {/* Mobile Layout */}
         <div className="md:hidden h-[calc(100vh-80px)]">
            <ProductList
             products={filteredProducts}
@@ -167,10 +183,10 @@ export default function InventoryPage() {
             selectedCategoryId={selectedCategoryId}
             setSelectedCategoryId={setSelectedCategoryId}
             onManageCategories={() => setIsManageCategoriesModalOpen(true)}
+            onAddProduct={handleAddProduct} // Pass handler
           />
         </div>
 
-        {/* Tablet & Desktop Layout */}
         <div className="hidden md:flex h-[calc(100vh-80px)] p-6 gap-6">
           <div className="w-[40%] lg:w-[30%] h-full">
            <ProductList
@@ -183,19 +199,28 @@ export default function InventoryPage() {
             selectedCategoryId={selectedCategoryId}
             setSelectedCategoryId={setSelectedCategoryId}
             onManageCategories={() => setIsManageCategoriesModalOpen(true)}
+            onAddProduct={handleAddProduct} // Pass handler
           />
           </div>
           <div className="w-[60%] lg:w-[70%] h-full">
             <ProductDetail 
               product={selectedProduct} 
-              onSave={() => refreshProducts()}
+              onSave={handleProductSaved}
               onDelete={handleOpenDeleteModal}
             />
           </div>
         </div>
       </div>
-
-      {/* NEW: Render the Manage Categories Modal */}
+      
+      {/* MODAL WIRING */}
+      <AddEditProductModal
+        isOpen={isAddProductModalOpen}
+        onClose={() => setIsAddProductModalOpen(false)}
+        onSave={handleProductSaved}
+        productToEdit={null}
+        productToRestock={null}
+      />
+      
       <ManageCategoriesModal
         isOpen={isManageCategoriesModalOpen}
         onClose={() => setIsManageCategoriesModalOpen(false)}

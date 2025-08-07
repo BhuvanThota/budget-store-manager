@@ -4,7 +4,6 @@
 import { useState, useEffect, Fragment, useCallback } from 'react';
 import { Combobox, Dialog, Transition } from '@headlessui/react';
 import { X, Trash2, Save } from 'lucide-react';
-// FIX: Changed 'PurchaseOrderWithItems' to the correctly exported 'PurchaseOrder' type
 import { PurchaseOrder, CreatePurchaseOrderData } from '@/types/purchaseOrder';
 import { Product } from '@/types/product';
 
@@ -22,7 +21,6 @@ interface AddEditPurchaseOrderModalProps {
   onClose: () => void;
   onSave: () => void;
   allProducts: Product[];
-  // FIX: Use the 'PurchaseOrder' type for the prop
   orderToEdit: PurchaseOrder | null;
   initialProduct?: Product | null;
 }
@@ -175,15 +173,18 @@ export default function AddEditPurchaseOrderModal({ isOpen, onClose, onSave, all
                           <span className="font-semibold text-sm text-gray-800">{item.productName}</span>
                           <button onClick={() => handleRemoveItem(item.productId)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
                         </div>
-                        <div className="grid grid-cols-3 gap-2">
+                        {/* MODIFIED: Added equation symbols */}
+                        <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-0.5 items-center">
                             <div>
                               <label className="text-xs text-gray-500">Qty</label>
                               <input type="number" value={item.quantityOrdered} onChange={e => handleItemChange(item.productId, 'quantityOrdered', e.target.value)} className="w-full p-2 border rounded-md text-sm" />
                             </div>
+                            <span className="text-gray-500 pt-5">×</span>
                             <div>
                               <label className="text-xs text-gray-500">Cost/Item</label>
                               <input type="number" value={item.costPricePerItem} onChange={e => handleItemChange(item.productId, 'costPricePerItem', e.target.value)} className="w-full p-2 border rounded-md text-sm" />
                             </div>
+                            <span className="text-gray-500 pt-5">=</span>
                             <div>
                               <label className="text-xs text-gray-500">Total Cost</label>
                               <input type="number" value={item.totalCost} onChange={e => handleItemChange(item.productId, 'totalCost', e.target.value)} className="w-full p-2 border rounded-md text-sm" />
@@ -193,7 +194,7 @@ export default function AddEditPurchaseOrderModal({ isOpen, onClose, onSave, all
                     ))}
                   </div>
                   
-                  <div className="relative">
+                  <div className="relative bg-blue-50">
                     <Combobox value={selectedProduct} onChange={setSelectedProduct}>
                       <Combobox.Input
                         className="w-full p-2 pl-4 border border-gray-300 rounded-md text-sm"

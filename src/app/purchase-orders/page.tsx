@@ -3,22 +3,21 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Product } from '@/types/product';
-import { Category } from '@/types/category'; // NEW: Import Category
-import { PlusCircle, Search, Package } from 'lucide-react';
-import AddEditProductModal from '@/components/AddEditProductModal';
+import { Category } from '@/types/category';
+import { Search, Package } from 'lucide-react'; // MODIFIED: Removed PlusCircle
 import AddEditPurchaseOrderModal from '@/components/purchase-orders/AddEditPurchaseOrderModal';
 import PurchaseHistoryModal from '@/components/purchase-orders/PurchaseHistoryModal';
 import ProductPurchaseCard from '@/components/purchase-orders/ProductPurchaseCard';
 
 export default function PurchaseOrdersPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]); // NEW: State for categories
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState(''); // NEW: State for category filter
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
 
   // Modal states
-  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+  // MODIFIED: Removed state for AddProductModal
   const [isAddPurchaseModalOpen, setIsAddPurchaseModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -30,7 +29,6 @@ export default function PurchaseOrdersPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // NEW: Fetch products and categories simultaneously
       const [productsRes, categoriesRes] = await Promise.all([
         fetch('/api/inventory'),
         fetch('/api/categories')
@@ -46,7 +44,6 @@ export default function PurchaseOrdersPage() {
     }
   };
 
-  // MODIFIED: Filtering logic now includes category
   const filteredProducts = useMemo(() => {
     return allProducts.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -64,6 +61,11 @@ export default function PurchaseOrdersPage() {
     setSelectedProduct(product);
     setIsHistoryModalOpen(true);
   };
+  
+  const handlePurchaseSaved = () => {
+    // We only need to refetch products here as purchases affect stock levels
+    fetchData();
+  };
 
   if (isLoading) {
     return (
@@ -80,23 +82,15 @@ export default function PurchaseOrdersPage() {
     <>
       <div className="container mx-auto p-4 max-w-7xl">
         <div>
-          {/* Header and Search */}
           <div className="bg-white p-4 rounded-lg shadow-md mb-6">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
               <div>
-                <h1 className="text-xl md:text-2xl font-bold text-gray-800">Manage Purchases</h1>
-                <p className="text-sm md:text-base text-gray-500">Add purchases for existing products or create new ones.</p>
+                <h1 className="text-xl md:text-2xl font-bold text-gray-800">Create Purchase Orders</h1>
+                <p className="text-sm md:text-base text-gray-500">Select a product below to record a new purchase and update its stock.</p>
               </div>
               <div className="w-full md:w-auto flex flex-col md:flex-row md:items-center gap-2">
-                <button
-                  onClick={() => setIsAddProductModalOpen(true)}
-                  className="w-full md:w-auto bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 order-1 md:order-3"
-                >
-                  <PlusCircle size={18} />
-                  Add Product
-                </button>
-                {/* NEW: Category Filter */}
-                <div className="relative w-full md:w-48 order-2 md:order-1">
+                {/* MODIFIED: "Add Product" button has been removed from here */}
+                <div className="relative w-full md:w-48">
                   <select
                     value={selectedCategoryId}
                     onChange={(e) => setSelectedCategoryId(e.target.value)}
@@ -108,7 +102,7 @@ export default function PurchaseOrdersPage() {
                     ))}
                   </select>
                 </div>
-                <div className="relative w-full md:w-64 order-3 md:order-2">
+                <div className="relative w-full md:w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                   <input
                     type="text"
@@ -122,7 +116,6 @@ export default function PurchaseOrdersPage() {
             </div>
           </div>
 
-          {/* Product Grid */}
           {filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredProducts.map(product => (
@@ -140,34 +133,21 @@ export default function PurchaseOrdersPage() {
                 <Package size={48} className="text-gray-400" />
               </div>
               <h2 className="text-xl font-semibold text-gray-700">No Products Found</h2>
-              <p className="text-gray-500 mt-2 mb-6">
-                No products match your search or filter. Would you like to create a new one?
+              <p className="text-gray-500 mt-2">
+                No products match your search or filter.
               </p>
-              <button
-                onClick={() => setIsAddProductModalOpen(true)}
-                className="bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 mx-auto"
-              >
-                <PlusCircle size={18} />
-                Create New Product
-              </button>
+               <p className="text-gray-500 mt-1">
+                Go to the <a href="/inventory" className="text-brand-primary font-semibold hover:underline">Inventory</a> page to add a new product.
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Modals */}
-      <AddEditProductModal
-        isOpen={isAddProductModalOpen}
-        onClose={() => setIsAddProductModalOpen(false)}
-        onSave={fetchData}
-        productToEdit={null}
-        productToRestock={{ name: searchQuery }}
-      />
-      
       <AddEditPurchaseOrderModal
         isOpen={isAddPurchaseModalOpen}
         onClose={() => setIsAddPurchaseModalOpen(false)}
-        onSave={fetchData}
+        onSave={handlePurchaseSaved}
         allProducts={allProducts}
         orderToEdit={null}
         initialProduct={selectedProduct}
