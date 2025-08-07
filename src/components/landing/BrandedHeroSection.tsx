@@ -12,6 +12,7 @@ import {
   CheckCircle,
   AlertTriangle} from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 // Mock data matching your actual dashboard
 const mockStats = [
@@ -91,9 +92,9 @@ const AnimatedDashboard = () => {
             <div className="bg-white p-4 rounded-lg shadow-sm flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
               <div>
-                <div className="font-bold text-gray-800">Welcome back, John!</div>
+                <div className="font-bold text-gray-800">Welcome back, Ganesh!</div>
                 <div className="text-sm" style={{ color: '#3D74B6' }}>
-                  Viewing dashboard for: <span className="font-semibold">John&apos;s Electronics Store</span>
+                  Viewing dashboard for: <span className="font-semibold">Ganesh Retail Store</span>
                 </div>
               </div>
             </div>
@@ -224,15 +225,18 @@ export default function BrandedHeroSection() {
       <header className="absolute top-0 left-0 right-0 z-10 bg-transparent py-4">
         <div className="container mx-auto px-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <div 
-              className="w-10 h-10 rounded-md flex items-center justify-center"
-              style={{ backgroundColor: '#3D74B6' }}
-            >
-              <Package className="text-white" size={20} />
-            </div>
-            <span className="font-bold text-lg hidden sm:inline" style={{ color: '#2D3748' }}>
-              Budget Shop Manager
-            </span>
+            <Link href="/" className="flex items-center gap-2">
+              <Image
+                src="/logo-budget-removebg.png"
+                alt="Budget Shop Manager Logo"
+                width={60}
+                height={60}
+                className="rounded-md"
+                />
+                <span className="font-bold text-lg hidden sm:inline" style={{ color: '#2D3748' }}>
+                Budget Shop Manager
+                </span>
+            </Link>
           </div>
           <nav>
             <Link
