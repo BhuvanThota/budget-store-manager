@@ -1,7 +1,7 @@
 // src/app/inventory/page.tsx
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { Product } from '@/types/product';
 import { Category } from '@/types/category';
 import ProductList from '@/components/inventory/ProductList';
@@ -13,6 +13,7 @@ import PasswordConfirmationModal from '@/components/PasswordConfirmationModal';
 import { Boxes } from 'lucide-react';
 import ManageCategoriesModal from '@/components/inventory/ManageCategoriesModal';
 import AddEditProductModal from '@/components/AddEditProductModal'; // NEW: Import modal
+import InfoModal from '@/components/InfoModal'; // NEW: Import modal
 
 export default function InventoryPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -31,6 +32,11 @@ export default function InventoryPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [isManageCategoriesModalOpen, setIsManageCategoriesModalOpen] = useState(false);
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false); // NEW: State for add product modal
+
+  // NEW: State for the InfoModal
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [infoModalContent, setInfoModalContent] = useState<{ title: string; message: string | ReactNode }>({ title: '', message: '' });
+
 
   const fetchInitialData = useCallback(async () => {
     if (allProducts.length === 0) setIsLoading(true);
@@ -81,9 +87,37 @@ export default function InventoryPage() {
     }
   };
   
-  const handleOpenDeleteModal = (productId: string) => {
+  // MODIFIED: This function now checks dependencies before opening a modal.
+  const handleOpenDeleteModal = async (productId: string) => {
     const product = allProducts.find(p => p.id === productId);
-    if (product) {
+    if (!product) return;
+
+    // Call our new dependency check API
+    const res = await fetch(`/api/products/${productId}/dependencies`);
+    const dependencies = await res.json();
+
+    if (dependencies.hasSalesOrders) {
+      // BLOCKER: If there are sales orders, show info modal and stop.
+      setInfoModalContent({
+        title: 'Deletion Blocked',
+        message: `This product cannot be deleted because it is part of one or more sales orders. To maintain accurate historical sales data, products with sales history cannot be removed.`
+      });
+      setIsInfoModalOpen(true);
+    } else if (dependencies.hasPurchaseOrders) {
+      // BLOCKER: If there are purchase orders, show info modal and stop.
+      setInfoModalContent({
+        title: 'Deletion Blocked',
+        message: (
+          <span>
+            This product is part of one or more purchase orders. Please go to the{' '}
+            <a href="/purchase-orders" className="text-brand-primary font-semibold hover:underline">Purchase Orders</a> page,
+            find the relevant orders in the <span className="font-semibold">Purchase-Order Page - History</span> tab, and delete them first.
+          </span>
+        )
+      });
+      setIsInfoModalOpen(true);
+    } else {
+      // SAFE TO DELETE: Proceed with the standard high-security deletion flow.
       setProductToDelete(product);
       setIsDeleteModalOpen(true);
     }
@@ -233,6 +267,14 @@ export default function InventoryPage() {
         product={selectedProduct}
         onSave={handleSaveAndCloseMobile}
         onDelete={handleOpenDeleteModal}
+      />
+
+      {/* ALL MODALS */}
+      <InfoModal
+        isOpen={isInfoModalOpen}
+        onClose={() => setIsInfoModalOpen(false)}
+        title={infoModalContent.title}
+        message={infoModalContent.message}
       />
       
       <ConfirmationModal
