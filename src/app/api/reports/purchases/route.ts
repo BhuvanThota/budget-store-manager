@@ -1,9 +1,8 @@
 // app/api/reports/purchases/route.ts
-
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma as db } from '@/lib/prisma'; // Using 'db' alias for consistency with your variable names
+import { prisma as db } from '@/lib/prisma';
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -29,54 +28,35 @@ export async function GET(request: Request) {
         return NextResponse.json({ message: 'Shop not found for user' }, { status: 404 });
     }
 
-    // --- Applying the CORRECT date handling from your sales report ---
     const startDate = new Date(startDateStr);
     startDate.setUTCHours(0, 0, 0, 0);
-
     const endDate = new Date(endDateStr);
     endDate.setUTCHours(23, 59, 59, 999);
     
-    // --- The rest of the logic can now work correctly ---
+    // MODIFIED: Query now includes product and category data
     const purchaseOrders = await db.purchaseOrder.findMany({
       where: {
-        shopId: user.shopId, // Added shopId check for security
-        createdAt: {
-          gte: startDate,
-          lte: endDate,
-        },
+        shopId: user.shopId,
+        createdAt: { gte: startDate, lte: endDate },
       },
       include: {
-        items: true,
+        items: {
+          include: {
+            product: {
+              include: {
+                category: true,
+              },
+            },
+          },
+        },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
     });
 
-    // --- Aggregation Logic (remains the same) ---
     let totalPurchaseValue = 0;
-    const productSummary: {
-      [productId: string]: {
-        productId: string;
-        productName: string;
-        totalQuantity: number;
-        totalCost: number;
-      };
-    } = {};
-
-    const productIds = new Set<string>();
-    purchaseOrders.forEach(po => {
-        po.items.forEach(item => {
-            productIds.add(item.productId);
-        });
-    });
-
-    const products = await db.product.findMany({
-        where: { id: { in: Array.from(productIds) } },
-        select: { id: true, name: true }
-    });
-
-    const productNameMap = new Map(products.map(p => [p.id, p.name]));
+    const productSummary: { [productId: string]: { productId: string; productName: string; totalQuantity: number; totalCost: number; } } = {};
+    // NEW: Add aggregator for category purchases
+    const categoryAggregator: { [key: string]: { name: string, totalCost: number, totalQuantity: number } } = {};
 
     for (const po of purchaseOrders) {
       for (const item of po.items) {
@@ -86,23 +66,34 @@ export async function GET(request: Request) {
         if (!productSummary[item.productId]) {
           productSummary[item.productId] = {
             productId: item.productId,
-            productName: productNameMap.get(item.productId) || 'Unknown Product',
+            productName: item.productName,
             totalQuantity: 0,
             totalCost: 0,
           };
         }
-
         productSummary[item.productId].totalQuantity += item.quantityOrdered;
         productSummary[item.productId].totalCost += itemCost;
+
+        // NEW: Aggregate category data
+        const categoryName = item.product?.category?.name || 'Uncategorized';
+        if (!categoryAggregator[categoryName]) {
+            categoryAggregator[categoryName] = { name: categoryName, totalCost: 0, totalQuantity: 0 };
+        }
+        categoryAggregator[categoryName].totalCost += itemCost;
+        categoryAggregator[categoryName].totalQuantity += item.quantityOrdered;
       }
     }
     
+    // NEW: Format and sort category purchase data
+    const categoryBreakdown = Object.values(categoryAggregator).sort((a,b) => b.totalCost - a.totalCost);
+
     const report = {
       summary: {
         totalPurchaseValue,
         totalOrders: purchaseOrders.length,
       },
       productBreakdown: Object.values(productSummary).sort((a,b) => b.totalCost - a.totalCost),
+      categoryBreakdown, // NEW: Include in response
     };
 
     return NextResponse.json(report);

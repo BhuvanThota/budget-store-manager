@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart3, ShoppingCart } from 'lucide-react';
 
-// You may want to move these type definitions to a central types file (e.g., src/types/report.ts)
 import { ReportData as SalesReportData } from '@/types/report'; 
 
 // Components used for displaying the report data
@@ -14,8 +13,12 @@ import TopProducts from '@/components/reports/TopProducts';
 import MetricCard from '@/components/reports/MetricCard';
 import ProductPurchaseBreakdown from '@/components/reports/ProductPurchaseBreakdown';
 import ReportDownloadButtons from '@/components/reports/ReportDownloadButtons';
+// NEW: Import the category components
+import CategorySalesChart from '@/components/reports/CategorySalesChart';
+import CategoryPurchaseBreakdown from '@/components/reports/CategoryPurchaseBreakdown';
 
-// Define the type for our Purchase Report Data
+
+// MODIFIED: Updated the PurchaseReportData type
 type PurchaseReportData = {
   summary: {
     totalPurchaseValue: number;
@@ -27,14 +30,15 @@ type PurchaseReportData = {
     totalQuantity: number;
     totalCost: number;
   }[];
+  categoryBreakdown: {
+    name: string;
+    totalQuantity: number;
+    totalCost: number;
+  }[];
 };
 
 const formatDateForInput = (date: Date) => date.toISOString().split('T')[0];
 
-/**
- * Fetches report data from the appropriate API endpoint.
- * This function is called by the useQuery hook.
- */
 const fetchReport = async (reportType: 'sales' | 'purchases', startDate: string, endDate: string) => {
     const endpoint = reportType === 'sales'
       ? `/api/reports?startDate=${startDate}&endDate=${endDate}`
@@ -53,7 +57,6 @@ const fetchReport = async (reportType: 'sales' | 'purchases', startDate: string,
 export default function ReportsPage() {
   const [reportType, setReportType] = useState<'sales' | 'purchases'>('sales');
   
-  // State for date controls
   const today = new Date();
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(today.getDate() - 30);
@@ -62,34 +65,20 @@ export default function ReportsPage() {
   const [endDate, setEndDate] = useState(formatDateForInput(today));
   const [activePreset, setActivePreset] = useState<'Today' | 'Last 7 Days' | 'This Month' | 'Last 30 Days' | null>('Last 30 Days');
 
-  // Store both sales and purchase data for combined reports
   const [allReportsData, setAllReportsData] = useState<{
     sales?: SalesReportData;
     purchases?: PurchaseReportData;
   }>({});
 
-  /**
-   * TanStack Query Hook:
-   * Replaces our manual useState for data, isLoading, and error.
-   * Manages caching, fetching, and state management automatically.
-   */
   const { data: reportData, isLoading, error, refetch, isFetching } = useQuery({
-    // The queryKey uniquely identifies this specific query.
-    // TanStack Query uses this for caching.
     queryKey: ['reports', reportType, startDate, endDate],
-    
-    // The queryFn is the async function that performs the data fetch.
     queryFn: () => fetchReport(reportType, new Date(startDate).toISOString(), new Date(endDate).toISOString()),
-    
-    // Configuration options:
-    enabled: false, // Prevents the query from running automatically on component mount.
-    refetchOnWindowFocus: false, // Disables refetching when the browser window is refocused.
+    enabled: false,
+    refetchOnWindowFocus: false,
   });
 
-  // Manually trigger the data fetch when the user clicks the button.
   const handleGenerateClick = () => {
     refetch().then((result) => {
-      // Store the data for combined reports
       if (result.data) {
         setAllReportsData(prev => ({
           ...prev,
@@ -97,10 +86,9 @@ export default function ReportsPage() {
         }));
       }
     });
-    setActivePreset(null); // Clear active preset styling on custom generation.
+    setActivePreset(null);
   }
 
-  // Helper to format currency consistently.
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -112,7 +100,7 @@ export default function ReportsPage() {
 
   return (
     <div className="container mx-auto p-4 md:p-6 grid grid-cols-1 min-[760px]:grid-cols-3 gap-6">
-      {/* Controls Column (Master) */}
+      {/* Controls Column */}
       <div className="min-[760px]:col-span-1">
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-bold text-gray-700 border-b pb-2 mb-4">📊 Select Report Period</h2>
@@ -137,7 +125,6 @@ export default function ReportsPage() {
           </button>
         </div>
 
-        {/* Download Section - NEW */}
         <div className="mt-6">
           <ReportDownloadButtons
             reportType={reportType}
@@ -150,7 +137,7 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Report Display Column (Detail) */}
+      {/* Report Display Column */}
       <div className="min-[760px]:col-span-2 bg-white p-6 rounded-lg shadow-md">
         <div className="flex border-b mb-4">
           <button onClick={() => setReportType('sales')} className={`px-4 py-2 font-semibold ${reportType === 'sales' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-500'}`}>Sales Summary</button>
@@ -160,7 +147,7 @@ export default function ReportsPage() {
         {isGenerating && <p>Loading report...</p>}
         {error && <p className="text-red-500 font-semibold">{(error as Error).message}</p>}
         
-        {/* --- Sales Report Display --- */}
+        {/* Sales Report Display */}
         {reportType === 'sales' && !isGenerating && !error && (
             !reportData ? (
                 <div className="text-center py-10">
@@ -175,13 +162,15 @@ export default function ReportsPage() {
                         <MetricCard title="Total Orders" value={String((reportData as SalesReportData).totalOrders)} bgColor="bg-indigo-50" textColor="text-indigo-600" />
                         <MetricCard title="Avg. Order Value" value={(reportData as SalesReportData).averageOrderValue.toFixed(2)} prefix="₹" bgColor="bg-purple-50" textColor="text-purple-600" />
                     </div>
+                    {/* NEW: Render Category Sales Chart */}
+                    <CategorySalesChart data={(reportData as SalesReportData).categorySales} />
                     <PerformanceInsights reportData={reportData as SalesReportData} />
                     <TopProducts reportData={reportData as SalesReportData} />
                 </div>
             )
         )}
 
-        {/* --- Purchase Report Display --- */}
+        {/* Purchase Report Display */}
         {reportType === 'purchases' && !isGenerating && !error && (
             !reportData ? (
                 <div className="text-center py-10">
@@ -194,6 +183,8 @@ export default function ReportsPage() {
                         <MetricCard title="Total Purchase Value" value={formatCurrency((reportData as PurchaseReportData).summary.totalPurchaseValue)} prefix="" bgColor="bg-blue-50" textColor="text-blue-600" />
                         <MetricCard title="Total Purchase Orders" value={String((reportData as PurchaseReportData).summary.totalOrders)} bgColor="bg-cyan-50" textColor="text-cyan-600" />
                     </div>
+                    {/* NEW: Render Category Purchase Breakdown */}
+                    <CategoryPurchaseBreakdown breakdown={(reportData as PurchaseReportData).categoryBreakdown} />
                     <ProductPurchaseBreakdown breakdown={(reportData as PurchaseReportData).productBreakdown} />
                 </div>
             )
