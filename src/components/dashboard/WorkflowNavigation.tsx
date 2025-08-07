@@ -51,36 +51,35 @@ function WorkflowCard({ title, description, href, icon, step, color }: WorkflowC
 }
 
 export default function WorkflowNavigation() {
-  // The workflows array is now reordered according to your request (1, 5, 2, 3, 4, 6)
-  // and the step numbers have been updated to be sequential.
+  // FINALIZED: The descriptions are now perfectly aligned with the app's features.
   const workflows = [
     {
-      title: "Add Products",
-      description: "Add products to your shop and create purchase orders.",
-      href: "/purchase-orders",
+      title: "Manage Products & Stock",
+      description: "Go to the Inventory page to add new products or manage existing stock levels.",
+      href: "/inventory",
       icon: <PlusCircle size={22} className="text-blue-600" />,
       step: 1,
       color: 'bg-gradient-to-br from-blue-50 to-indigo-100',
     },
     {
-      title: "Manage Inventory",
-      description: "Update stock, adjust prices, and set low-stock alerts.",
-      href: "/inventory",
+      title: "Manage Purchase Orders",
+      description: "Create new purchase orders and view or delete recent POs from the history tab.",
+      href: "/purchase-orders",
       icon: <Package size={22} className="text-purple-600" />,
       step: 2,
       color: 'bg-gradient-to-br from-purple-50 to-violet-100',
     },
     {
-      title: "Make a Sale",
-      description: "Use the Point of Sale (POS) system for quick customer transactions.",
+      title: "Make a Sale (POS)",
+      description: "Use the Point of Sale system for fast and easy customer transactions.",
       href: "/pos",
       icon: <ShoppingCart size={22} className="text-green-600" />,
       step: 3,
       color: 'bg-gradient-to-br from-green-50 to-emerald-100',
     },
     {
-      title: "View Orders",
-      description: "Review your transaction history and manage past sales.",
+      title: "View Sales History",
+      description: "Review your past sales transactions and order details.",
       href: "/orders",
       icon: <History size={22} className="text-teal-600" />,
       step: 4,
@@ -88,7 +87,7 @@ export default function WorkflowNavigation() {
     },
     {
       title: "Analyze Reports",
-      description: "Generate detailed reports to understand profits and top sellers.",
+      description: "Generate detailed reports to understand profits, categories, and top sellers.",
       href: "/reports",
       icon: <BarChart3 size={22} className="text-red-600" />,
       step: 5,
@@ -122,12 +121,7 @@ export default function WorkflowNavigation() {
         {workflows.map((workflow) => (
           <WorkflowCard
             key={workflow.step}
-            title={workflow.title}
-            description={workflow.description}
-            href={workflow.href}
-            icon={workflow.icon}
-            step={workflow.step}
-            color={workflow.color}
+            {...workflow}
           />
         ))}
       </div>

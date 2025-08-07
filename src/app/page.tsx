@@ -1,8 +1,8 @@
+// src/app/page.tsx
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import Image from 'next/image'
+import BrandedHeroSection from '@/components/landing/BrandedHeroSection'
 
 export default async function Home() {
   const session = await getServerSession(authOptions)
@@ -11,34 +11,5 @@ export default async function Home() {
     redirect('/dashboard')
   }
 
-  return (
-    <div className="min-h-screen bg-brand-background">
-      <div className="flex min-h-screen items-center justify-center px-4">
-        <div className="w-full max-w-md text-center">
-          <div className="flex justify-center mb-6">
-            <Image
-              src="/logo-budget.png"
-              alt="Budget Shop Manager Logo"
-              width={100}
-              height={100}
-              className="rounded-lg"
-            />
-          </div>
-          <h1 className="text-4xl font-bold text-brand-text mb-2">
-            Welcome to Budget Shop Manager
-          </h1>
-          <p className="text-gray-500 mb-8">
-            Sign in to get started with your account
-          </p>
-          
-          <Link
-            href="/auth/signin"
-            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-brand-primary hover:bg-brand-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 ring-brand-primary transition-colors"
-          >
-            Get Started
-          </Link>
-        </div>
-      </div>
-    </div>
-  )
+  return <BrandedHeroSection />
 }
