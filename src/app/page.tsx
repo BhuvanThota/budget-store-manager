@@ -19,9 +19,9 @@ export default async function Home() {
   return (
     <>
       <BrandedHeroSection />
-      <KeyFeaturesShowcase /> 
       <VisualWorkflow />
       <ResponsiveShowcase />  
+      <KeyFeaturesShowcase /> 
       <FinalCTA />
       <Footer />
     </>

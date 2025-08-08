@@ -40,7 +40,7 @@ const steps = [
 
 export default function VisualWorkflow() {
   return (
-    <section className="py-16 lg:py-24 bg-brand-background relative overflow-hidden">
+    <section className="py-16 lg:py-24 bg-white relative overflow-hidden">
       {/* Background Decorative Elements */}
       <div className="absolute inset-0 overflow-hidden opacity-30">
         <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"></div>
