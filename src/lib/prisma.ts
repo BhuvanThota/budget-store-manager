@@ -1,11 +1,17 @@
-import { PrismaClient } from '@prisma/client'
+// src/lib/prisma.ts
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
+import { PrismaClient } from '@prisma/client';
+
+// This declares a global variable to hold the Prisma Client instance.
+declare global {
+  // eslint-disable-next-line no-var
+  var prisma: PrismaClient | undefined;
 }
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient()
+// This line either creates a new PrismaClient instance or reuses the existing one from the global scope.
+// The `globalThis.prisma` part is crucial for preventing new instances from being created during hot-reloads in development.
+export const prisma = globalThis.prisma || new PrismaClient();
 
 if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma
+  globalThis.prisma = prisma;
 }
