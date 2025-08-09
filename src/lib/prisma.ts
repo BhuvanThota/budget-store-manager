@@ -8,10 +8,11 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-// This line either creates a new PrismaClient instance or reuses the existing one from the global scope.
-// The `globalThis.prisma` part is crucial for preventing new instances from being created during hot-reloads in development.
+// This line is the core of the solution. It creates a new PrismaClient instance
+// ONLY if one doesn't already exist on the global object.
 export const prisma = globalThis.prisma || new PrismaClient();
 
+// In development, this prevents new instances from being created during hot-reloads.
 if (process.env.NODE_ENV !== 'production') {
   globalThis.prisma = prisma;
 }
