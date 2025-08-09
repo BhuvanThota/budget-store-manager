@@ -184,22 +184,32 @@ export default function InventoryPage() {
     );
   }
   
+  // Replace the above section with this one:
   if (allProducts.length === 0 && !isLoading) {
-    // MODIFIED: Show a different message if there are no products, and include the add product button
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-80px)] text-center px-4">
-        <div>
-          <Boxes size={48} className="text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold text-gray-700">Your Inventory is Empty</h2>
-          <p className="text-gray-500 mt-2 mb-6">Get started by adding your first product.</p>
-          <button
-            onClick={handleAddProduct}
-            className="bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2 px-5 rounded-lg transition-colors flex items-center justify-center gap-2 mx-auto"
-          >
-            Add First Product
-          </button>
+      <>
+        <div className="flex items-center justify-center h-[calc(100vh-80px)] text-center px-4">
+          <div>
+            <Boxes size={48} className="text-gray-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-semibold text-gray-700">Your Inventory is Empty</h2>
+            <p className="text-gray-500 mt-2 mb-6">Get started by adding your first product.</p>
+            <button
+              onClick={handleAddProduct}
+              className="bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2 px-5 rounded-lg transition-colors flex items-center justify-center gap-2 mx-auto"
+            >
+              Add First Product
+            </button>
+          </div>
         </div>
-      </div>
+        {/* ADDED: Ensure the modal is always available to be opened */}
+        <AddEditProductModal
+          isOpen={isAddProductModalOpen}
+          onClose={() => setIsAddProductModalOpen(false)}
+          onSave={handleProductSaved}
+          productToEdit={null}
+          productToRestock={null}
+        />
+      </>
     );
   }
 
