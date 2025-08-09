@@ -161,7 +161,7 @@ export default function SideMenu() {
 
           <div className="p-4 border-t border-gray-200 bg-gray-50">
             <div className="text-xs text-gray-500 text-center">
-              Version 1.6.0
+              Version 1.2.0
             </div>
           </div>
         </div>
