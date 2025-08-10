@@ -36,21 +36,28 @@ export default function AddEditPurchaseOrderModal({ isOpen, onClose, onSave, all
   const isEditing = !!orderToEdit;
 
   const handleAddItem = useCallback((product: Product) => {
-    if (!items.some(item => item.productId === product.id)) {
-      setItems(currentItems => [...currentItems, {
+    // Using a functional update to avoid stale state issues with `items`
+    setItems(currentItems => {
+      if (currentItems.some(item => item.productId === product.id)) {
+        return currentItems;
+      }
+      return [...currentItems, {
         productId: product.id,
         productName: product.name,
         quantityOrdered: '1',
         costPricePerItem: String(product.costPrice?.toFixed(2) || '0.00'),
         totalCost: String(product.costPrice?.toFixed(2) || '0.00'),
         lastEdited: 'perItem',
-      }]);
-    }
-  }, [items]);
+      }];
+    });
+  }, []);
 
+  // --- THIS IS THE FIX ---
+  // This hook now correctly resets the state when opening for a new product.
   useEffect(() => {
     if (isOpen) {
       if (orderToEdit) {
+        // Logic for editing an existing order (correctly sets the entire state)
         setSupplierDetails(orderToEdit.supplierDetails || '');
         setNotes(orderToEdit.notes || '');
         setItems(orderToEdit.items.map(item => ({
@@ -62,16 +69,26 @@ export default function AddEditPurchaseOrderModal({ isOpen, onClose, onSave, all
           lastEdited: 'perItem',
         })));
       } else if (initialProduct) {
-         handleAddItem(initialProduct);
-         setSupplierDetails('');
-         setNotes('');
+        // **FIXED LOGIC**: When creating a new PO from a product,
+        // we now explicitly set the `items` array to contain ONLY that product.
+        setItems([{
+          productId: initialProduct.id,
+          productName: initialProduct.name,
+          quantityOrdered: '1',
+          costPricePerItem: String(initialProduct.costPrice?.toFixed(2) || '0.00'),
+          totalCost: String(initialProduct.costPrice?.toFixed(2) || '0.00'),
+          lastEdited: 'perItem',
+        }]);
+        setSupplierDetails('');
+        setNotes('');
       } else {
+        // Fallback to reset everything if the modal is opened from scratch
         setItems([]);
         setSupplierDetails('');
         setNotes('');
       }
     }
-  }, [isOpen, orderToEdit, initialProduct, handleAddItem]);
+  }, [isOpen, orderToEdit, initialProduct]);
 
   useEffect(() => {
     if (selectedProduct) {
@@ -173,7 +190,6 @@ export default function AddEditPurchaseOrderModal({ isOpen, onClose, onSave, all
                           <span className="font-semibold text-sm text-gray-800">{item.productName}</span>
                           <button onClick={() => handleRemoveItem(item.productId)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
                         </div>
-                        {/* MODIFIED: Added equation symbols */}
                         <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-0.5 items-center">
                             <div>
                               <label className="text-xs text-gray-500">Qty</label>
