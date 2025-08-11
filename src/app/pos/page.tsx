@@ -6,7 +6,7 @@ import { Product } from '@/types/product';
 import { Category } from '@/types/category'; // NEW: Import Category
 import CartModal, { CartItem } from '@/components/CartModal';
 import CartSidebar from '@/components/CartSidebar';
-import { ShoppingCart, Plus, Minus, Search, Package, Tag } from 'lucide-react'; // NEW: Import Tag
+import { ShoppingCart, Plus, Minus, Search, Package, Tag, AlertTriangle } from 'lucide-react'; // NEW: Import Tag
 
 export default function PosPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -17,6 +17,10 @@ export default function PosPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState(''); // NEW: State for category filter
+  const [errorMessage, setErrorMessage] = useState('');
+  const [totalDiscountInput, setTotalDiscountInput] = useState('');
+  const [discountType, setDiscountType] = useState<'PERCENT' | 'FIXED'>('PERCENT');
+
 
   const cartMap = useMemo(() => new Map(cart.map(item => [item.id, item])), [cart]);
 
@@ -37,24 +41,22 @@ export default function PosPage() {
   const fetchInitialData = async () => {
     setIsLoading(true);
     try {
-      const [productsRes, categoriesRes] = await Promise.all([
-        fetch('/api/inventory'),
-        fetch('/api/categories'),
-      ]);
+      const [productsRes, categoriesRes] = await Promise.all([ fetch('/api/inventory'), fetch('/api/categories') ]);
+      if (!productsRes.ok || !categoriesRes.ok) throw new Error('Failed to fetch store data.');
       const productsData = await productsRes.json();
       const categoriesData = await categoriesRes.json();
       setProducts(productsData);
       setCategories(categoriesData);
     } catch (error) {
       console.error('Failed to fetch initial data', error);
+      setErrorMessage('Could not load store data. Please refresh.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleAddToCart = (product: Product) => {
-    const costAtSale = product.costPrice;
-    setCart(prevCart => [...prevCart, { ...product, quantity: 1, costAtSale }]);
+    setCart(prevCart => [...prevCart, { ...product, quantity: 1, costAtSale: product.costPrice }]);
   };
 
   const handleUpdateQuantity = (productId: string, newQuantity: number) => {
@@ -62,18 +64,12 @@ export default function PosPage() {
       setCart(prevCart => prevCart.filter(item => item.id !== productId));
       return;
     }
-
     const productInInventory = products.find(p => p.id === productId);
     if (productInInventory && newQuantity > productInInventory.currentStock) {
       alert(`Cannot add more than available stock (${productInInventory.currentStock}).`);
       return;
     }
-
-    setCart(prevCart =>
-      prevCart.map(item =>
-        item.id === productId ? { ...item, quantity: newQuantity } : item
-      )
-    );
+    setCart(prevCart => prevCart.map(item => item.id === productId ? { ...item, quantity: newQuantity } : item));
   };
 
   const handleClearCart = () => {
@@ -82,33 +78,90 @@ export default function PosPage() {
     }
   };
 
+
+  const cartSubtotal = cart.reduce((sum, item) => sum + item.sellPrice * item.quantity, 0);
+
+  const finalTotalDiscount = useMemo(() => {
+    const value = parseFloat(totalDiscountInput);
+    if (isNaN(value) || value < 0) return 0;
+    const calculatedDiscount = discountType === 'PERCENT' ? (cartSubtotal * value) / 100 : value;
+    return Math.floor(calculatedDiscount);
+  }, [totalDiscountInput, discountType, cartSubtotal]);
+
+  const finalCartTotal = useMemo(() => {
+    return Math.ceil(cartSubtotal - finalTotalDiscount);
+  }, [cartSubtotal, finalTotalDiscount]);
+  
+  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+ 
+  const maxCartDiscount = useMemo(() => {
+    const totalSellPrice = cart.reduce((sum, item) => sum + item.sellPrice * item.quantity, 0);
+    const totalFloorPrice = cart.reduce((sum, item) => sum + item.floorPrice * item.quantity, 0);
+    return totalSellPrice - totalFloorPrice;
+  }, [cart]);
+
+    // --- NEW: useEffect for discount validation ---
+  // This hook watches for changes in the discount input and automatically validates it.
+  useEffect(() => {
+    const value = parseFloat(totalDiscountInput);
+    if (isNaN(value) || value < 0) return;
+
+    const calculatedDiscount = discountType === 'PERCENT' ? (cartSubtotal * value) / 100 : value;
+    
+    // If the entered discount exceeds the maximum allowed, we correct it.
+    if (maxCartDiscount > 0 && calculatedDiscount > maxCartDiscount) {
+      alert(`The discount cannot exceed the maximum of ₹${maxCartDiscount.toFixed(2)}. It has been automatically adjusted.`);
+      // We correct the value by setting it to the maximum allowed fixed amount.
+      setDiscountType('FIXED');
+      setTotalDiscountInput(String(Math.floor(maxCartDiscount)));
+    }
+  }, [totalDiscountInput, discountType, maxCartDiscount, cartSubtotal]);
+  
   const handleConfirmOrder = async () => {
     setIsSubmitting(true);
-    const totalAmount = cart.reduce((sum, item) => sum + item.sellPrice * item.quantity, 0);
+    setErrorMessage('');
 
+    // --- REFINED & SIMPLIFIED VALIDATION LOGIC ---
+    if (finalTotalDiscount > maxCartDiscount) {
+        setErrorMessage(`The applied discount of ₹${finalTotalDiscount.toFixed(2)} exceeds the maximum allowed of ₹${maxCartDiscount.toFixed(2)}.`);
+        setIsSubmitting(false);
+        return;
+    }
+
+    // Distribute the final, validated discount for record-keeping
+    const finalCartItems = cart.map(item => {
+      const itemSubtotal = item.sellPrice * item.quantity;
+      const proportionOfTotal = cartSubtotal > 0 ? itemSubtotal / cartSubtotal : 0;
+      const distributedDiscount = finalTotalDiscount * proportionOfTotal;
+      const finalDiscountPerUnit = distributedDiscount > 0 ? (distributedDiscount / item.quantity) : 0;
+      return { ...item, discount: finalDiscountPerUnit };
+    });
+    
     try {
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cartItems: cart, totalAmount }),
+        body: JSON.stringify({ cartItems: finalCartItems, totalAmount: finalCartTotal }),
       });
-
-      if (!res.ok) throw new Error('Failed to create order');
-
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to create order');
+      }
       alert('Order created successfully!');
       setCart([]);
+      setTotalDiscountInput('');
       setIsCartOpen(false);
-      fetchInitialData();
+      await fetchInitialData();
     } catch (error) {
       console.error(error);
-      alert('There was an error creating the order.');
+      setErrorMessage(error instanceof Error ? error.message : 'There was an error creating the order.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const cartTotal = cart.reduce((sum, item) => sum + item.sellPrice * item.quantity, 0);
+
+
 
   const LoadingState = () => (
     <div className="flex items-center justify-center py-12">
@@ -240,15 +293,30 @@ export default function PosPage() {
 
   return (
     <>
+      {errorMessage && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
+            <AlertTriangle size={20} />
+            <span className="font-semibold">{errorMessage}</span>
+        </div>
+      )}
       {/* Desktop Layout (760px+) */}
       <div className="hidden min-[760px]:flex h-[calc(100vh-80px)] gap-1">
         <div className="w-[40%] h-full">
-          <CartSidebar 
+        <CartSidebar 
             cart={cart}
             isSubmitting={isSubmitting}
             handleClearCart={handleClearCart}
             handleConfirmOrder={handleConfirmOrder}
             handleUpdateQuantity={handleUpdateQuantity}
+            // --- SIMPLIFIED PROPS ---
+            totalDiscountInput={totalDiscountInput}
+            setTotalDiscountInput={setTotalDiscountInput}
+            discountType={discountType}
+            setDiscountType={setDiscountType}
+            cartSubtotal={cartSubtotal}
+            finalTotalDiscount={finalTotalDiscount}
+            finalCartTotal={finalCartTotal}
+            maxCartDiscount={maxCartDiscount}
           />
         </div>
         <div className="w-[60%] h-full flex flex-col">
@@ -351,7 +419,7 @@ export default function PosPage() {
               </div>
               <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                 <div className="bg-gray-800 text-white text-sm rounded-lg py-2 px-3 whitespace-nowrap">
-                  {cartItemCount} items • ₹{cartTotal.toFixed(2)}
+                  {cartItemCount} items • ₹{cartSubtotal.toFixed(2)}
                   <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
                 </div>
               </div>
@@ -367,6 +435,15 @@ export default function PosPage() {
           onConfirmOrder={handleConfirmOrder}
           onClearCart={handleClearCart}
           isSubmitting={isSubmitting}
+          // --- SIMPLIFIED PROPS ---
+          totalDiscountInput={totalDiscountInput}
+          setTotalDiscountInput={setTotalDiscountInput}
+          discountType={discountType}
+          setDiscountType={setDiscountType}
+          cartSubtotal={cartSubtotal}
+          finalTotalDiscount={finalTotalDiscount}
+          finalCartTotal={finalCartTotal}
+          maxCartDiscount={maxCartDiscount}
         />
       </div>
     </>

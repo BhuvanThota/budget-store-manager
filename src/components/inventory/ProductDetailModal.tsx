@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Product } from '@/types/product';
 import { Category } from '@/types/category';
-import { X, Save, AlertTriangle, TrendingUp, TrendingDown, Boxes, Edit3, Trash2, Tag, PlusCircle } from 'lucide-react'; // MODIFIED: Added PlusCircle
+import { X, Save, AlertTriangle, TrendingUp, TrendingDown, Boxes, Edit3, Trash2, Tag, PlusCircle, DollarSign, ShieldCheck } from 'lucide-react'; // MODIFIED: Added PlusCircle
 
 interface ProductDetailModalProps {
   isOpen: boolean;
@@ -15,13 +15,17 @@ interface ProductDetailModalProps {
   onDelete: (productId: string) => void;
 }
 
+interface EditableProduct extends Product {
+  floorPrice: number;
+}
+
 const capitalizeFirstLetter = (str: string): string => {
   if (!str) return str;
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
 export default function ProductDetailModal({ isOpen, onClose, product, onSave, onDelete }: ProductDetailModalProps) {
-  const [formData, setFormData] = useState<Partial<Product>>({});
+  const [formData, setFormData] = useState<Partial<EditableProduct>>({});
   const [categories, setCategories] = useState<Category[]>([]);
   const [highestCostPrice, setHighestCostPrice] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -103,6 +107,7 @@ export default function ProductDetailModal({ isOpen, onClose, product, onSave, o
       name: formData.name,
       costPrice: parseFloat(String(formData.costPrice)) || 0,
       sellPrice: parseFloat(String(formData.sellPrice)) || 0,
+      floorPrice: parseFloat(String(formData.floorPrice)) || 0,
       currentStock: parseInt(String(formData.currentStock), 10) || 0,
       stockThreshold: parseInt(String(formData.stockThreshold), 10) || 0,
       categoryId: formData.categoryId || null,
@@ -130,14 +135,23 @@ export default function ProductDetailModal({ isOpen, onClose, product, onSave, o
     }
   };
 
-  const profitLoss = useMemo(() => {
+  const sellPriceProfit = useMemo(() => {
     const sell = Number(formData.sellPrice);
-    const cost = Number(highestCostPrice);
-    if (!sell || !cost || cost === 0) return null;
+    const cost = highestCostPrice;
+    if (isNaN(sell) || isNaN(cost)) return null;
     const difference = sell - cost;
-    const percentage = (difference / cost) * 100;
+    const percentage = cost > 0 ? (difference / cost) * 100 : (sell > 0 ? Infinity : 0);
     return { value: difference, percentage, isProfit: difference >= 0 };
   }, [formData.sellPrice, highestCostPrice]);
+
+  const floorPriceProfit = useMemo(() => {
+    const floor = Number(formData.floorPrice);
+    const cost = highestCostPrice;
+    if (isNaN(floor) || isNaN(cost)) return null;
+    const difference = floor - cost;
+    const percentage = cost > 0 ? (difference / cost) * 100 : (floor > 0 ? Infinity : 0);
+    return { value: difference, percentage, isProfit: difference >= 0 };
+  }, [formData.floorPrice, highestCostPrice]);
 
   if (!product) return null;
 
@@ -173,7 +187,26 @@ export default function ProductDetailModal({ isOpen, onClose, product, onSave, o
                       {categoryError && <p className="text-red-500 text-xs mt-1">{categoryError}</p>}
                     </div>
                   )}
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200"><h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2"><TrendingUp size={16} className="text-green-600" />Pricing</h4><div className="grid grid-cols-2 gap-3"><div><label className="block text-xs font-medium text-gray-600 mb-1">Sell Price (₹)</label><input type="number" step="0.01" name="sellPrice" value={formData.sellPrice || ''} onChange={handleInputChange} className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-brand-primary focus:border-brand-primary" placeholder="0.00"/></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Cost Price</label><input type="number" value={highestCostPrice.toFixed(2)} readOnly className="w-full p-2 text-sm border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"/></div></div>{profitLoss && (<div className={`mt-3 p-2 rounded-md text-xs flex items-center gap-2 ${profitLoss.isProfit ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{profitLoss.isProfit ? <TrendingUp size={14} /> : <TrendingDown size={14} />}<span>{profitLoss.isProfit ? 'Profit' : 'Loss'}:<span className="font-semibold"> ₹{profitLoss.value.toFixed(2)}</span> ({profitLoss.percentage.toFixed(0)}%)</span></div>)}</div>
+                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2"><DollarSign size={16} />Pricing</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                          <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Sell Price</label>
+                              <input type="number" step="0.01" name="sellPrice" value={formData.sellPrice || ''} onChange={handleInputChange} className="w-full p-2 text-sm border rounded-md"/>
+                          </div>
+                          <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Highest Cost</label>
+                              <input type="number" value={highestCostPrice.toFixed(2)} readOnly className="w-full p-2 text-sm border rounded-md bg-gray-100"/>
+                          </div>
+                      </div>
+                      {sellPriceProfit && (<div className={`mt-2 p-2 rounded-md text-xs flex items-center gap-2 ${sellPriceProfit.isProfit ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}> {sellPriceProfit.isProfit ? <TrendingUp size={14} /> : <TrendingDown size={14} />}<span>Margin: <span className="font-semibold">₹{sellPriceProfit.value.toFixed(2)}</span> ({sellPriceProfit.percentage.toFixed(0)}%)</span></div>)}
+                      
+                      <div className="mt-3">
+                          <label htmlFor="floorPrice" className="block text-xs font-medium text-gray-600 mb-1">Floor Price (₹)</label>
+                          <input type="number" step="0.01" id="floorPrice" name="floorPrice" value={formData.floorPrice || ''} onChange={handleInputChange} className="w-full p-2 text-sm border border-gray-300 rounded-md" placeholder="0.00"/>
+                      </div>
+                      {floorPriceProfit && (<div className={`mt-2 p-2 rounded-md text-xs flex items-center gap-2 ${floorPriceProfit.isProfit ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}><ShieldCheck size={14} /><span>Guaranteed Profit: <span className="font-semibold">₹{floorPriceProfit.value.toFixed(2)}</span> ({floorPriceProfit.percentage.toFixed(0)}%)</span></div>)}
+                  </div>
                   <div className="bg-gray-50 p-3 rounded-lg border border-gray-200"><h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2"><Boxes size={16} className="text-purple-600" />Stock Management</h4><div className="mb-3 p-2 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-md"><div className="flex"><div className="flex-shrink-0"><AlertTriangle className="h-4 w-4 text-yellow-400" /></div><div className="ml-2"><p className="text-xs text-yellow-700">Adjust <span className="font-semibold">Current Stock</span> for manual changes. Use Purchase Orders to add new stock.</p></div></div></div><div className="grid grid-cols-2 gap-3"><div><label className="block text-xs font-medium text-gray-600 mb-1">Current Stock</label><input type="number" name="currentStock" value={formData.currentStock || ''} onChange={handleInputChange} className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-brand-primary focus:border-brand-primary" placeholder="0"/></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Total Stock</label><input type="number" value={formData.totalStock || 0} readOnly className="w-full p-2 text-sm border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"/></div><div className="col-span-2"><label className="block text-xs font-medium text-gray-600 mb-1">Stock Threshold</label><input type="number" name="stockThreshold" value={formData.stockThreshold || ''} onChange={handleInputChange} className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-brand-primary focus:border-brand-primary" placeholder="10"/></div></div></div>
                 </div>
                 <div className="border-t bg-gray-50 px-4 py-3"><div className="flex gap-3"><button onClick={() => onDelete(product.id)} className="w-1/3 bg-gray-200 hover:bg-red-100 text-red-700 font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"><Trash2 size={16} />Delete</button><button onClick={handleSave} disabled={isSaving} className="flex-1 bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"><Save size={16} />{isSaving ? 'Saving...' : 'Save Changes'}</button></div></div>

@@ -7,13 +7,13 @@ export interface Product {
   name: string;
   costPrice: number;
   sellPrice: number;
+  floorPrice: number; // NEW: Add floorPrice to the type
   totalStock: number;
   currentStock: number;
   stockThreshold: number;
   createdAt: string;
   updatedAt: string;
   shopId: string;
-  // MODIFIED: Added optional category fields
   categoryId?: string | null;
   category?: Category | null;
 }
@@ -21,4 +21,5 @@ export interface Product {
 export interface CartItem extends Product {
   quantity: number;
   costAtSale: number;
+  discount?: number;
 }

@@ -1,8 +1,4 @@
-# Your Updated Chat Starter Guide for the Budget Store Manager Project
-
-**(Copy and paste the text below into a new chat after uploading your project files)**
-
-Hello Claude,
+Hello Gemini,
 
 We are continuing our work on the "Budget Store Manager" project. Please adopt the following context and persona for our entire conversation.
 
