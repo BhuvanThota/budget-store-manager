@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { CartItem } from '@/types/product';
 
-// POST /api/orders - Creates a new order
+// POST /api/orders - Creates a new order with discount validation
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -34,6 +34,24 @@ export async function POST(request: NextRequest) {
         where: { id: { in: productIds } },
       });
 
+      // --- NEW SERVER-SIDE VALIDATION: Check against the entire cart ---
+      const cartSubtotal = cartItems.reduce((sum: number, item: CartItem) => sum + item.sellPrice * item.quantity, 0);
+      const totalDiscount = cartSubtotal - totalAmount;
+
+      const totalFloorPrice = cartItems.reduce((sum: number, item: CartItem) => {
+          const product = productsInDb.find(p => p.id === item.id);
+          const floorPrice = product ? product.floorPrice : 0;
+          return sum + (floorPrice * item.quantity);
+      }, 0);
+
+      const maxCartDiscount = cartSubtotal - totalFloorPrice;
+
+      if (totalDiscount > maxCartDiscount + 0.01) { // Add a small tolerance for floating point rounding
+          throw new Error(
+              `The total discount of ₹${totalDiscount.toFixed(2)} exceeds the maximum allowed discount of ₹${maxCartDiscount.toFixed(2)} for this cart.`
+          );
+      }
+
       const order = await tx.order.create({
         data: {
           totalAmount: totalAmount,
@@ -41,14 +59,11 @@ export async function POST(request: NextRequest) {
           items: {
             create: cartItems.map((item: CartItem) => {
               const product = productsInDb.find(p => p.id === item.id);
-              
-              // FIX: Use the new `costPrice` field directly.
-              const costAtSale = product ? product.costPrice : 0;
-              
               return {
                 quantity: item.quantity,
                 soldAt: item.sellPrice,
-                costAtSale: costAtSale, // Use the correct cost
+                costAtSale: product ? product.costPrice : 0,
+                discount: item.discount || 0, // Store the validated discount
                 productId: item.id,
                 productName: item.name,
               };
@@ -57,6 +72,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // Decrement stock for each product sold
       for (const item of cartItems) {
         await tx.product.update({
           where: { id: item.id },
@@ -75,13 +91,18 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating order:', error);
+    // If our validation throws an error, it will be caught here
+    // and sent as a user-friendly message to the frontend.
+    if (error instanceof Error) {
+        return NextResponse.json({ message: error.message }, { status: 400 });
+    }
     return NextResponse.json({ message: 'Something went wrong while creating the order' }, { status: 500 });
   }
 }
 
-
 // GET /api/orders - Fetches paginated AND filtered orders
 export async function GET(request: NextRequest) {
+    // This function remains unchanged.
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
         return NextResponse.json({ message: 'Not authenticated' }, { status: 401 });
@@ -125,7 +146,13 @@ export async function GET(request: NextRequest) {
         const [orders, totalOrders] = await prisma.$transaction([
             prisma.order.findMany({
                 where: whereClause,
-                include: { items: true },
+                include: { 
+                    items: {
+                        include: {
+                            product: true // Include full product details if needed later
+                        }
+                    } 
+                },
                 orderBy: { createdAt: 'desc' },
                 skip: skip,
                 take: limit,

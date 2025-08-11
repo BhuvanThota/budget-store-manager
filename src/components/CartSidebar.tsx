@@ -2,12 +2,13 @@
 'use client';
 
 import { Product } from '@/types/product';
-import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, ShieldCheck } from 'lucide-react';
 
 // Re-using the CartItem type definition
 export interface CartItem extends Product {
   quantity: number;
   costAtSale: number;
+  discount?: number;
 }
 
 interface CartSidebarProps {
@@ -16,6 +17,14 @@ interface CartSidebarProps {
   handleUpdateQuantity: (productId: string, newQuantity: number) => void;
   handleConfirmOrder: () => void;
   handleClearCart: () => void;
+  totalDiscountInput: string;
+  setTotalDiscountInput: (value: string) => void;
+  discountType: 'PERCENT' | 'FIXED';
+  setDiscountType: (type: 'PERCENT' | 'FIXED') => void;
+  cartSubtotal: number;
+  finalTotalDiscount: number;
+  finalCartTotal: number;
+  maxCartDiscount: number;
 }
 
 export default function CartSidebar({ 
@@ -23,10 +32,19 @@ export default function CartSidebar({
   isSubmitting, 
   handleUpdateQuantity, 
   handleConfirmOrder, 
-  handleClearCart 
+  handleClearCart,
+  totalDiscountInput,
+  setTotalDiscountInput,
+  discountType,
+  setDiscountType,
+  cartSubtotal,
+  finalTotalDiscount,
+  finalCartTotal,
+  maxCartDiscount,
 }: CartSidebarProps) {
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const cartTotal = cart.reduce((sum, item) => sum + item.sellPrice * item.quantity, 0);
+  const quickDiscountPercentages = [5, 10, 15, 20];
+
 
   return (
     <div className="bg-white h-full rounded-2xl shadow-xl border-2 border-gray-200 flex flex-col">
@@ -112,45 +130,41 @@ export default function CartSidebar({
             </div>
           </div>
 
-          <div className="border-t border-gray-200 bg-white p-4 rounded-b-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <div className="text-gray-600">
-                <div className="text-sm">Total ({cartItemCount} items)</div>
+
+          <div className="border-t bg-white p-4 rounded-b-lg">
+            <div className="space-y-2 mb-4">
+              <label className="block text-sm font-medium text-gray-700">Total Bill Discount</label>
+              <div className="flex items-center gap-1 text-xs text-gray-500"><ShieldCheck size={14} className="text-blue-500"/><span>Max cart discount: <strong>₹{maxCartDiscount.toFixed(2)}</strong></span></div>
+              <div className="flex gap-2 pt-1">
+                {quickDiscountPercentages.map(perc => {
+                    const discountAmount = (cartSubtotal * perc) / 100;
+                    const isDisabled = discountAmount > maxCartDiscount;
+                    return (
+                        <button key={perc} onClick={() => { setDiscountType('PERCENT'); setTotalDiscountInput(String(perc)); }} disabled={isDisabled} className="flex-1 text-xs bg-blue-50 text-blue-700 rounded-full py-1 px-2 border hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                            {perc}%
+                        </button>
+                    )
+                })}
               </div>
-              <div className="text-right">
-                <div className="text-xl font-bold text-gray-800">₹{cartTotal.toFixed(2)}</div>
+              <div className="flex">
+                <input type="number" value={totalDiscountInput} onChange={(e) => setTotalDiscountInput(e.target.value)} className="w-full p-2 border rounded-l-md text-sm" placeholder="e.g., 10"/>
+                <select value={discountType} onChange={(e) => setDiscountType(e.target.value as 'PERCENT' | 'FIXED')} className="p-2 border-t border-b border-r rounded-r-md bg-gray-100 text-sm">
+                  <option value="PERCENT">%</option>
+                  <option value="FIXED">₹</option>
+                </select>
               </div>
             </div>
-
-            <div className="space-y-2 flex flex-row gap-2">
-            <button
-                onClick={handleClearCart}
-                disabled={isSubmitting}
-                className="w-[40%] h-[4rem] bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <Trash2 size={16} />
-                Clear Cart
+            <div className="space-y-1 text-sm mb-4">
+              <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span>₹{cartSubtotal.toFixed(2)}</span></div>
+              <div className="flex justify-between text-red-600"><span className="text-gray-600">Total Discount</span><span>- ₹{finalTotalDiscount.toFixed(2)}</span></div>
+              <hr className="my-1"/>
+              <div className="flex justify-between font-bold text-lg text-brand-text"><span>Grand Total</span><span>₹{finalCartTotal.toFixed(2)}</span></div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleClearCart} disabled={isSubmitting} className="flex-1 bg-orange-500 text-white text-sm font-semibold py-3 rounded-lg flex items-center justify-center gap-2"><Trash2 size={16} />Clear</button>
+              <button onClick={handleConfirmOrder} disabled={isSubmitting || finalCartTotal < 0} className="flex-auto bg-brand-primary text-white font-semibold py-3 px-4 rounded-lg disabled:opacity-50">
+                {isSubmitting ? 'Processing...' : `Pay ₹${finalCartTotal.toFixed(2)}`}
               </button>
-
-              <button
-                onClick={handleConfirmOrder}
-                disabled={isSubmitting}
-                className="w-[60%] h-[4rem] bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart size={16} />
-                    Complete Sale
-                  </>
-                )}
-              </button>
-              
-              
             </div>
           </div>
         </>
