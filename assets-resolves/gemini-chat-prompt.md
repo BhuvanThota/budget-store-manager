@@ -1,3 +1,5 @@
+
+
 Hello Gemini,
 
 We are continuing our work on the "Budget Store Manager" project. Please adopt the following context and persona for our entire conversation.
@@ -22,18 +24,19 @@ We are continuing our work on the "Budget Store Manager" project. Please adopt t
     // ... rest of the code
   }
   ```
-* **Database Schema (`schema.prisma`)**: The schema is finalized for a purchase order system with categories. Key points:
-  * The `Product` model has `costPrice` (average cost), `sellPrice`, `totalStock` (cumulative), and `currentStock` (adjustable). It also has a per-product `stockThreshold`.
+* **Database Schema (`schema.prisma`)**: The schema is finalized and includes advanced pricing and order details. Key points:
+  * The `Product` model has `costPrice` (average cost), `sellPrice`, `totalStock` (cumulative), `currentStock` (adjustable), and **`floorPrice`** (minimum profitable selling price). The `floorPrice` is automatically calculated from `costPrice` but can be manually overridden by the owner.
   * **A `Category` model is fully implemented** with an optional relationship to the `Product` model (products can have categories or be uncategorized).
+  * The `OrderItem` model includes a **`discount`** field to accurately record the discount applied per item at the time of sale.
   * A complete `PurchaseOrder` and `PurchaseOrderItem` system is in place with `PurchaseOrderStatus` enum.
   * Authentication supports both OAuth (Google) and credentials with password setup for OAuth users.
 
 ## **3. UI/UX Architecture & Patterns:**
 
 * **Responsiveness**: All pages are optimized for mobile, tablet, and large desktops, often using master-detail layouts that collapse into modal-driven UIs on mobile.
-* **Component System**: We use reusable components (`DashboardCard`, `ConfirmationModal`, `PasswordConfirmationModal`, `SuccessModal`, `LoadingSpinner`) for consistency.
+* **Component System**: We use a rich set of reusable components for consistency (`DashboardCard`, `ConfirmationModal`, `PasswordConfirmationModal`, `SuccessModal`, `LoadingSpinner`, `EditOrderModal`, `CartModal`, `CartSidebar`, etc.).
 * **Loading States**: All primary pages use a `loading.tsx` file with a shared `LoadingSpinner` component for instant feedback.
-* **Color Scheme**: Custom brand colors defined in CSS variables:
+* **Color Scheme**: Custom brand colors are defined in CSS variables:
   * `--brand-primary: #3D74B6` (Blue)
   * `--brand-secondary: #EAC8A6` (Tan)
   * `--brand-accent: #DC3C22` (Red-Orange)
@@ -53,7 +56,7 @@ We are continuing our work on the "Budget Store Manager" project. Please adopt t
 * Responsive master-detail UI for product management.
 * Desktop: Side-by-side layout with product list and detail panel.
 * Mobile: List view with modal-based detail editing.
-* Detail view allows editing of `name`, `sellPrice`, `stockThreshold`, and `currentStock`. `costPrice` and `totalStock` are read-only.
+* Detail view allows editing of `name`, `sellPrice`, `stockThreshold`, `currentStock`, and **`floorPrice`**. The UI provides a clear view of the guaranteed profit margin based on the `floorPrice`. `costPrice` and `totalStock` are read-only.
 * **Full Category Management**: Includes a `ManageCategoriesModal` for full CRUD operations and a category filter on the product list. Allows for in-context category creation from product detail modals.
 * **High-Security Deletion**: Two-step confirmation (general confirmation modal + password verification modal).
 
@@ -66,17 +69,24 @@ We are continuing our work on the "Budget Store Manager" project. Please adopt t
 * Includes `PurchaseHistoryModal` for viewing product purchase history.
 
 ### **Point of Sale (POS) Page (`/pos`)**:
-* Optimized for quick customer transactions.
+* Optimized for quick customer transactions with a streamlined UI.
 * Desktop: Split layout with cart sidebar and product grid.
 * Mobile: Product grid with floating cart button and `CartModal`.
 * **Category Filtering**: Includes a category filter to help cashiers quickly find items during sales.
 * Real-time stock validation and quantity controls.
+* Features an **Advanced Total Bill Discount System**:
+  * A single "Total Bill Discount" section in the cart allows cashiers to apply discounts as either a percentage (%) or a fixed amount (₹).
+  * **Smart Discount Suggestions**: The UI displays "quick discount" buttons (e.g., 5%, 10%) which are intelligently disabled if they exceed the cart's maximum profitable discount.
+  * **Client-Side Validation**: The discount input field provides immediate feedback, automatically correcting any entry that is higher than the `maxCartDiscount` to prevent errors.
+  * **Rounding Logic**: The final discount is rounded **down** to the nearest integer (`Math.floor()`), and the final grand total is rounded **up** (`Math.ceil()`) for simple, clear transactions.
 
 ### **Orders Page (`/orders`)**:
 * Responsive master-detail page with robust date range filters and presets.
 * Server-side pagination (25 orders per page).
 * Desktop: List + detail panel. Mobile: List + modal detail view.
-* Full CRUD operations: view, edit (`EditOrderModal`), and delete with stock restoration.
+* **Discount-Aware Display**: The order detail view now clearly shows a breakdown of the Subtotal, Discount, and Grand Total if a discount was applied.
+* **Full Discount Editing**: The `EditOrderModal` now includes the complete discount editing functionality from the POS page, allowing discounts to be added or changed on existing orders, with all safety validations re-applied on the backend.
+* Full CRUD operations: view, edit, and delete with stock restoration.
 
 ### **Reports Page (`/reports`)**:
 * Tabbed interface for Sales and Purchase reports using TanStack Query.
@@ -114,14 +124,39 @@ We are continuing our work on the "Budget Store Manager" project. Please adopt t
 * **Analytics Integration**: Category-based reporting and insights in the Reports section
 * **User Experience**: In-context category creation and management without disrupting primary workflows
 
-## **8. Key Development Patterns:**
+## **8. Advanced Pricing & Discount System:**
 
-* **Error Handling**: Consistent error boundaries and user-friendly messages
-* **Form Validation**: Client-side validation with server-side verification
-* **Responsive Design**: Mobile-first approach with progressive enhancement
-* **Performance**: Optimized images, code splitting, and efficient database queries
-* **Accessibility**: Proper ARIA labels, keyboard navigation, and color contrast
-* **Data Consistency**: Transactional operations for inventory updates and order processing
+### **Floor Price System**:
+* Each product has a `floorPrice` field representing the minimum profitable selling price.
+* The `floorPrice` is automatically calculated from `costPrice` but can be manually overridden by the owner.
+* The UI displays guaranteed profit margins based on the `floorPrice`.
+* All discount validations use `floorPrice` to ensure profitability is maintained.
+
+### **Intelligent Discount Management**:
+* **Cart-Level Validation**: Discounts are validated against the **entire cart** as a single unit, not per-item.
+* **Maximum Discount Calculation**: `maxCartDiscount = cartSubtotal - totalFloorPrice`
+* **Client-Side Protection**: Real-time validation prevents users from entering unprofitable discounts.
+* **Server-Side Security**: Backend validates all discount requests to ensure data integrity.
+* **Flexible Discount Types**: Support for both percentage and fixed amount discounts.
+* **Smart UI Features**: Quick discount buttons that automatically disable when they would exceed profitability limits.
+
+## **9. Key Development Patterns:**
+
+* **Immutable IDs**: All data relationships (e.g., between Orders and Products) strictly use the immutable `productId`, not mutable names, to ensure data integrity.
+* **Robust Discount Validation**: The discount logic is validated on both the client-side (for a smooth UX) and the server-side (for security and data integrity).
+* **Transactional Integrity**: All multi-step database operations (creating orders, updating inventory) are wrapped in `prisma.$transaction` to guarantee data consistency.
+* **Error Handling & Form Validation**: Consistent error messages and a combination of client and server-side validation are used throughout the application.
+* **Responsive Design**: Mobile-first approach with progressive enhancement.
+* **Performance**: Optimized images, code splitting, and efficient database queries.
+* **Accessibility**: Proper ARIA labels, keyboard navigation, and color contrast.
+
+## **10. Business Logic Validation Rules:**
+
+* **Stock Management**: Current stock can be manually adjusted; total stock is automatically calculated from purchase orders.
+* **Pricing Logic**: Sell price must be greater than or equal to floor price for new transactions.
+* **Discount Constraints**: Total cart discount cannot exceed `(sellPrice × quantity) - (floorPrice × quantity)` for all items combined.
+* **Order Editing**: When editing existing orders, discount validations are re-applied to ensure continued profitability.
+* **Purchase Order Integration**: New purchase orders automatically update product `costPrice` (weighted average) and `totalStock`.
 
 Now, with this context established, let's begin. Our next task is:
 
