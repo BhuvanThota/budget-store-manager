@@ -102,76 +102,76 @@ export async function POST(request: NextRequest) {
 
 // GET /api/orders - Fetches paginated AND filtered orders
 export async function GET(request: NextRequest) {
-    // This function remains unchanged.
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-        return NextResponse.json({ message: 'Not authenticated' }, { status: 401 });
-    }
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+      return NextResponse.json({ message: 'Not authenticated' }, { status: 401 });
+  }
 
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '25');
-    const skip = (page - 1) * limit;
+  const { searchParams } = new URL(request.url);
+  const page = parseInt(searchParams.get('page') || '1');
+  const limit = parseInt(searchParams.get('limit') || '25');
+  const skip = (page - 1) * limit;
 
-    const startDateStr = searchParams.get('startDate');
-    const endDateStr = searchParams.get('endDate');
+  const startDateStr = searchParams.get('startDate');
+  const endDateStr = searchParams.get('endDate');
 
-    if (!startDateStr || !endDateStr) {
-        return NextResponse.json({ message: 'Start and end dates are required' }, { status: 400 });
-    }
+  if (!startDateStr || !endDateStr) {
+      return NextResponse.json({ message: 'Start and end dates are required' }, { status: 400 });
+  }
 
-    const startDate = new Date(startDateStr);
-    startDate.setUTCHours(0, 0, 0, 0);
-    const endDate = new Date(endDateStr);
-    endDate.setUTCHours(23, 59, 59, 999);
+  const startDate = new Date(startDateStr);
+  startDate.setUTCHours(0, 0, 0, 0);
+  const endDate = new Date(endDateStr);
+  endDate.setUTCHours(23, 59, 59, 999);
 
-    try {
-        const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { shopId: true },
-        });
+  try {
+      const user = await prisma.user.findUnique({
+          where: { email: session.user.email },
+          select: { shopId: true },
+      });
 
-        if (!user || !user.shopId) {
-            return NextResponse.json({ message: 'Shop not found for user' }, { status: 404 });
-        }
+      if (!user || !user.shopId) {
+          return NextResponse.json({ message: 'Shop not found for user' }, { status: 404 });
+      }
 
-        const whereClause = {
-            shopId: user.shopId,
-            createdAt: {
-                gte: startDate,
-                lte: endDate,
-            },
-        };
+      const whereClause = {
+          shopId: user.shopId,
+          createdAt: {
+              gte: startDate,
+              lte: endDate,
+          },
+      };
 
-        const [orders, totalOrders] = await prisma.$transaction([
-            prisma.order.findMany({
-                where: whereClause,
-                include: { 
-                    items: {
-                        include: {
-                            product: true // Include full product details if needed later
-                        }
-                    } 
-                },
-                orderBy: { createdAt: 'desc' },
-                skip: skip,
-                take: limit,
-            }),
-            prisma.order.count({ where: whereClause }),
-        ]);
-        
-        const totalPages = Math.ceil(totalOrders / limit);
+      const [orders, totalOrders] = await prisma.$transaction([
+          prisma.order.findMany({
+              where: whereClause,
+              include: { 
+                  items: {
+                      // THIS IS THE CRUCIAL CHANGE
+                      include: {
+                          product: true // Include full product details for floorPrice access
+                      }
+                  } 
+              },
+              orderBy: { createdAt: 'desc' },
+              skip: skip,
+              take: limit,
+          }),
+          prisma.order.count({ where: whereClause }),
+      ]);
+      
+      const totalPages = Math.ceil(totalOrders / limit);
 
-        return NextResponse.json({
-            orders,
-            pagination: {
-                currentPage: page,
-                totalPages,
-                totalOrders,
-            },
-        });
-    } catch (error) {
-        console.error('Error fetching orders:', error);
-        return NextResponse.json({ message: 'Something went wrong while fetching orders' }, { status: 500 });
-    }
+      return NextResponse.json({
+          orders,
+          pagination: {
+              currentPage: page,
+              totalPages,
+              totalOrders,
+          },
+      });
+  } catch (error) {
+      console.error('Error fetching orders:', error);
+      return NextResponse.json({ message: 'Something went wrong while fetching orders' }, { status: 500 });
+  }
 }
