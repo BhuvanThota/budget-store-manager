@@ -167,9 +167,32 @@ export default function ProductDetail({ product, onSave, onDelete, onAddPurchase
   return (
     <div className="bg-white h-full rounded-lg shadow-md flex flex-col">
       <div className="p-4 border-b">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-brand-secondary/30 rounded-lg flex items-center justify-center"><Edit3 size={18} className="text-brand-primary" /></div>
-          <div><h2 className="text-xl font-bold text-brand-text">Edit Product</h2><p className="text-sm text-gray-500">Manage details, pricing, and stock levels</p></div>
+
+        <div className="flex items-center justify-between gap-3">
+          {/* Left side: Icon and Title */}
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-brand-secondary/30 rounded-lg flex items-center justify-center">
+              <Edit3 size={18} className="text-brand-primary" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-brand-text">Edit Product</h2>
+              <p className="text-sm text-gray-500">Manage details, pricing, and stock</p>
+            </div>
+          </div>
+
+          {/* Right side: Add Purchase Button */}
+          <div className="flex items-center h-full gap-4">
+            <div className="w-px self-stretch bg-gray-400"></div>
+            <button 
+              onClick={() => onAddPurchase(product)}
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 rounded-lg transition-colors flex items-center gap-2 text-sm"
+              >
+              <ShoppingCart size={16} />
+              {/* Using whitespace-nowrap to prevent the text from breaking into two lines */}
+              <span className="whitespace-nowrap">Add Purchase</span>
+            </button>
+          </div>
+
         </div>
       </div>
       <div className="flex-grow p-4 space-y-4 overflow-y-auto">
@@ -242,22 +265,16 @@ export default function ProductDetail({ product, onSave, onDelete, onAddPurchase
       <div className="p-4 border-t bg-gray-50 flex gap-3">
         <button 
           onClick={() => product && onDelete(product.id)} 
-          className="w-1/5 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+          className="w-1/3 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
         >
           <Trash2 size={16} />
           Delete
         </button>
-        <button 
-          onClick={() => onAddPurchase(product)}
-          className="w-2/5 bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-        >
-          <ShoppingCart size={16} />
-          Add Purchase
-        </button>
+
         <button 
           onClick={handleSave} 
           disabled={isSaving} 
-          className="w-2/5 bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          className="w-2/3 bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <Save size={16} />
           {isSaving ? 'Saving...' : 'Save Changes'}
