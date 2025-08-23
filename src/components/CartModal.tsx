@@ -1,9 +1,9 @@
 // src/components/CartModal.tsx
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Product } from '@/types/product';
-import { X, Plus, Minus, ShoppingCart, Trash2, ShieldCheck } from 'lucide-react';
+import { X, Plus, Minus, ShoppingCart, Trash2, ShieldCheck, Tag, ChevronDown, ChevronUp } from 'lucide-react';
 
 export interface CartItem extends Product {
   quantity: number;
@@ -47,8 +47,22 @@ export default function CartModal({
   maxCartDiscount
 }: CartModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const [isDiscountVisible, setIsDiscountVisible] = useState(false);
   const quickDiscountPercentages = [5, 10, 15, 20];
 
+  const handleToggleDiscount = () => {
+    if (isDiscountVisible) {
+      setTotalDiscountInput('');
+    }
+    setIsDiscountVisible(!isDiscountVisible);
+  }
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsDiscountVisible(false);
+    }
+  }, [isOpen]);
+  
   // Close modal on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -125,93 +139,89 @@ export default function CartModal({
         ) : (
           <>
             <div className="flex-grow overflow-y-auto">
-              <div className="p-3 space-y-2">
+              <ul className="p-3 space-y-2">
                 {cartItems.map(item => (
-                  <div key={item.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                    <div className="flex items-start gap-3">
-                      {/* Product Info */}
-                      <div className="flex-grow min-w-0">
-                        <h3 className="font-semibold text-gray-800 mb-1 line-clamp-2 text-sm">
-                          {item.name}
-                        </h3>
-                        <div className="flex items-center gap-3 text-xs text-gray-600 mb-2">
-                          <span>₹{item.sellPrice.toFixed(2)} each</span>
-                          <span>Stock: {item.currentStock}</span>
+                  // --- UPDATED COMPACT ITEM CARD ---
+                  <li key={item.id} className="py-3 flex items-center gap-3">
+                    <div className="flex-grow min-w-0">
+                      <h3 className="font-semibold text-gray-800 text-sm leading-tight">
+                        {item.name}
+                      </h3>
+                      <p className="text-xs text-gray-500 mt-1">
+                        ₹{item.sellPrice.toFixed(2)} each
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0 flex items-center gap-3">
+                      <p className="font-bold text-sm text-gray-800 min-w-[45px] text-right">
+                        ₹{(item.sellPrice * item.quantity).toFixed(2)}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} className="bg-orange-500 text-white rounded-lg w-6 h-6 flex items-center justify-center">
+                          <Minus size={12} />
+                        </button>
+                        <div className="bg-white border rounded-lg px-2 py-1 min-w-[2.5rem] text-center">
+                          <span className="font-semibold text-sm">{item.quantity}</span>
                         </div>
-                        
-                        {/* Quantity Controls */}
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} 
-                            className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg w-6 h-6 flex items-center justify-center transition-colors"
-                            disabled={isSubmitting}
-                          >
-                            <Minus size={12} />
-                          </button>
-                          
-                          <div className="bg-white border border-gray-300 rounded-lg px-2 py-1 min-w-[2.5rem] text-center">
-                            <span className="font-semibold text-gray-800 text-sm">{item.quantity}</span>
-                          </div>
-                          
-                          <button 
-                            onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} 
-                            className="bg-brand-primary hover:bg-brand-primary/90 text-white rounded-lg w-6 h-6 flex items-center justify-center transition-colors"
-                            disabled={isSubmitting || item.quantity >= item.currentStock}
-                          >
-                            <Plus size={12} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Price and Remove */}
-                      <div className="text-right">
-                        <div className="font-bold text-gray-800 mb-2 text-sm">
-                          ₹{(item.sellPrice * item.quantity).toFixed(2)}
-                        </div>
-                        <button
-                          onClick={() => onUpdateQuantity(item.id, 0)}
-                          className="text-red-500 hover:text-red-700 p-1 rounded transition-colors"
-                          disabled={isSubmitting}
-                          title="Remove from cart"
-                        >
-                          <Trash2 size={14} />
+                        <button onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} disabled={item.quantity >= item.currentStock} className="bg-brand-primary text-white rounded-lg w-6 h-6 flex items-center justify-center disabled:opacity-50">
+                          <Plus size={12} />
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
 
             <div className="border-t bg-white p-4 sm:rounded-b-2xl">
               <div className="space-y-2 mb-4">
                 <label className="block text-sm font-medium text-gray-700">Total Bill Discount</label>
-                <div className="flex items-center gap-1 text-xs text-gray-500"><ShieldCheck size={14} className="text-blue-500"/><span>Max cart discount: <strong>₹{maxCartDiscount.toFixed(2)}</strong></span></div>
-                <div className="flex gap-2 pt-1">
-                    {quickDiscountPercentages.map(perc => {
-                        const discountAmount = (cartSubtotal * perc) / 100;
-                        const isDisabled = discountAmount > maxCartDiscount;
-                        return (
-                            <button key={perc} onClick={() => { setDiscountType('PERCENT'); setTotalDiscountInput(String(perc)); }} disabled={isDisabled} className="flex-1 text-xs bg-blue-50 text-blue-700 rounded-full py-1 px-2 border hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed">
-                                {perc}%
-                            </button>
-                        )
-                    })}
-                </div>
-                <div className="flex">
-                    <input type="number" value={totalDiscountInput} onChange={(e) => setTotalDiscountInput(e.target.value)} className="w-full p-2 border rounded-l-md text-sm" placeholder="e.g., 10"/>
-                    <select value={discountType} onChange={(e) => setDiscountType(e.target.value as 'PERCENT' | 'FIXED')} className="p-2 border-t border-b border-r rounded-r-md bg-gray-100 text-sm">
+                <div className="mb-4">
+                <button
+                  onClick={handleToggleDiscount}
+                  className="w-full flex justify-between items-center text-left p-2 rounded-lg bg-gray-50 hover:bg-gray-100 border"
+                >
+                  <div className="flex items-center gap-2">
+                    <Tag size={16} className="text-brand-primary" />
+                    <span className="text-sm font-medium text-gray-700">
+                      {isDiscountVisible ? 'Hide Discount Options' : 'Apply Discount'}
+                    </span>
+                  </div>
+                  {isDiscountVisible ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+                </button>
+
+                {isDiscountVisible && (
+                  <div className="mt-3 space-y-2 animate-in fade-in-0 slide-in-from-top-2 duration-300">
+                    <div className="flex items-center gap-1 text-xs text-gray-500"><ShieldCheck size={14} className="text-blue-500"/><span>Max cart discount: <strong>₹{maxCartDiscount.toFixed(2)}</strong></span></div>
+                    <div className="flex gap-2 pt-1">
+                      {quickDiscountPercentages.map(perc => {
+                          const discountAmount = (cartSubtotal * perc) / 100;
+                          const isDisabled = discountAmount > maxCartDiscount;
+                          return (
+                              <button key={perc} onClick={() => { setDiscountType('PERCENT'); setTotalDiscountInput(String(perc)); }} disabled={isDisabled} className="flex-1 text-xs bg-blue-50 text-blue-700 rounded-full py-1 px-2 border hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                                  {perc}%
+                              </button>
+                          )
+                      })}
+                    </div>
+                    <div className="flex">
+                      <input type="number" value={totalDiscountInput} onChange={(e) => setTotalDiscountInput(e.target.value)} className="w-full p-2 border rounded-l-md text-sm" placeholder="e.g., 10"/>
+                      <select value={discountType} onChange={(e) => setDiscountType(e.target.value as 'PERCENT' | 'FIXED')} className="p-2 border-t border-b border-r rounded-r-md bg-gray-100 text-sm">
                         <option value="PERCENT">%</option>
                         <option value="FIXED">₹</option>
-                    </select>
+                      </select>
+                    </div>
+                  </div>
+                )}
                 </div>
               </div>
-              <div className="space-y-1 text-sm mb-4">
-                <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span>₹{cartSubtotal.toFixed(2)}</span></div>
+             <div className="space-y-1 text-sm mb-4">
+              <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span>₹{cartSubtotal.toFixed(2)}</span></div>
+              {finalTotalDiscount > 0 && (
                 <div className="flex justify-between text-red-600"><span className="text-gray-600">Total Discount</span><span>- ₹{finalTotalDiscount.toFixed(2)}</span></div>
-                <hr className="my-1"/>
-                <div className="flex justify-between font-bold text-lg text-brand-text"><span>Grand Total</span><span>₹{finalCartTotal.toFixed(2)}</span></div>
-              </div>
+              )}
+              <hr className="my-1"/>
+              <div className="flex justify-between font-bold text-lg text-brand-text"><span>Grand Total</span><span>₹{finalCartTotal.toFixed(2)}</span></div>
+            </div>
 
               {/* Action Buttons */}
               <div className="flex gap-2">

@@ -1,8 +1,9 @@
 // src/components/CartSidebar.tsx
 'use client';
 
+import { useState } from 'react'; // NEW: Import useState
 import { Product } from '@/types/product';
-import { ShoppingCart, Plus, Minus, Trash2, ShieldCheck } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, ShieldCheck, Tag, ChevronDown, ChevronUp } from 'lucide-react';
 
 // Re-using the CartItem type definition
 export interface CartItem extends Product {
@@ -44,7 +45,14 @@ export default function CartSidebar({
 }: CartSidebarProps) {
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const quickDiscountPercentages = [5, 10, 15, 20];
+  const [isDiscountVisible, setIsDiscountVisible] = useState(false);
 
+  const handleToggleDiscount = () => {
+    if (isDiscountVisible) {
+      setTotalDiscountInput('');
+    }
+    setIsDiscountVisible(!isDiscountVisible);
+  }
 
   return (
     <div className="bg-white h-full rounded-2xl shadow-xl border-2 border-gray-200 flex flex-col">
@@ -77,51 +85,46 @@ export default function CartSidebar({
           <div className="flex-grow overflow-y-auto">
             <div className="p-4 space-y-3">
               {cart.map(item => (
-                <div key={item.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-grow min-w-0">
-                      <h3 className="font-semibold text-gray-800 mb-1 line-clamp-2 text-sm">
-                        {item.name}
-                      </h3>
-                      <div className="flex items-center gap-4 text-xs text-gray-600 mb-3">
-                        <span>₹{item.sellPrice.toFixed(2)} each</span>
-                        <span>Stock: {item.currentStock}</span>
+                // --- UPDATED ITEM CARD LAYOUT ---
+                <div key={item.id} className="bg-gray-50 rounded-xl p-3 border border-gray-200 flex items-center gap-3">
+                  {/* Left Side: Product Info */}
+                  <div className="flex-grow min-w-0">
+                    <h3 className="font-semibold text-gray-800 line-clamp-2 text-sm leading-tight">
+                      {item.name}
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      ₹{item.sellPrice.toFixed(2)} each
+                    </p>
+                  </div>
+
+                  {/* Right Side: Action Buttons & Price */}
+                  <div className="flex-shrink-0 flex items-center gap-4">
+                    <p className="font-bold text-sm text-gray-800 min-w-[50px] text-right">
+                      ₹{(item.sellPrice * item.quantity).toFixed(2)}
+                    </p>
+
+                    {/* All action buttons are now in this single row */}
+                    <div className="flex items-center gap-2">
+                      <div className="w-px h-5 bg-gray-300"></div>
+
+                      <button 
+                        onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)} 
+                        className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg w-7 h-7 flex items-center justify-center transition-colors"
+                        disabled={isSubmitting}
+                      >
+                        <Minus size={14} />
+                      </button>
+                      
+                      <div className="bg-white border border-gray-300 rounded-lg px-2 py-1 min-w-[2.5rem] text-center">
+                        <span className="font-semibold text-gray-800 text-sm">{item.quantity}</span>
                       </div>
                       
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)} 
-                          className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg w-7 h-7 flex items-center justify-center transition-colors"
-                          disabled={isSubmitting}
-                        >
-                          <Minus size={14} />
-                        </button>
-                        
-                        <div className="bg-white border border-gray-300 rounded-lg px-2 py-1 min-w-[2.5rem] text-center">
-                          <span className="font-semibold text-gray-800 text-sm">{item.quantity}</span>
-                        </div>
-                        
-                        <button 
-                          onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)} 
-                          className="bg-brand-primary hover:bg-brand-primary/90 text-white rounded-lg w-7 h-7 flex items-center justify-center transition-colors"
-                          disabled={isSubmitting || item.quantity >= item.currentStock}
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <div className="font-bold text-sm text-gray-800 mb-2">
-                        ₹{(item.sellPrice * item.quantity).toFixed(2)}
-                      </div>
-                      <button
-                        onClick={() => handleUpdateQuantity(item.id, 0)}
-                        className="text-red-500 hover:text-red-700 p-1 rounded transition-colors"
-                        disabled={isSubmitting}
-                        title="Remove from cart"
+                      <button 
+                        onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)} 
+                        className="bg-brand-primary hover:bg-brand-primary/90 text-white rounded-lg w-7 h-7 flex items-center justify-center transition-colors"
+                        disabled={isSubmitting || item.quantity >= item.currentStock}
                       >
-                        <Trash2 size={14} />
+                        <Plus size={14} />
                       </button>
                     </div>
                   </div>
@@ -132,28 +135,45 @@ export default function CartSidebar({
 
 
           <div className="border-t bg-white p-4 rounded-b-lg">
-            <div className="space-y-2 mb-4">
-              <label className="block text-sm font-medium text-gray-700">Total Bill Discount</label>
-              <div className="flex items-center gap-1 text-xs text-gray-500"><ShieldCheck size={14} className="text-blue-500"/><span>Max cart discount: <strong>₹{maxCartDiscount.toFixed(2)}</strong></span></div>
-              <div className="flex gap-2 pt-1">
-                {quickDiscountPercentages.map(perc => {
-                    const discountAmount = (cartSubtotal * perc) / 100;
-                    const isDisabled = discountAmount > maxCartDiscount;
-                    return (
-                        <button key={perc} onClick={() => { setDiscountType('PERCENT'); setTotalDiscountInput(String(perc)); }} disabled={isDisabled} className="flex-1 text-xs bg-blue-50 text-blue-700 rounded-full py-1 px-2 border hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed">
-                            {perc}%
-                        </button>
-                    )
-                })}
-              </div>
-              <div className="flex">
-                <input type="number" value={totalDiscountInput} onChange={(e) => setTotalDiscountInput(e.target.value)} className="w-full p-2 border rounded-l-md text-sm" placeholder="e.g., 10"/>
-                <select value={discountType} onChange={(e) => setDiscountType(e.target.value as 'PERCENT' | 'FIXED')} className="p-2 border-t border-b border-r rounded-r-md bg-gray-100 text-sm">
-                  <option value="PERCENT">%</option>
-                  <option value="FIXED">₹</option>
-                </select>
-              </div>
+            <div className="mb-4">
+              <button
+                onClick={handleToggleDiscount}
+                className="w-full flex justify-between items-center text-left p-2 rounded-lg bg-gray-50 hover:bg-gray-100 border"
+              >
+                <div className="flex items-center gap-2">
+                  <Tag size={16} className="text-brand-primary" />
+                  <span className="text-sm font-medium text-gray-700">
+                    {isDiscountVisible ? 'Hide Discount Options' : 'Apply Discount'}
+                  </span>
+                </div>
+                {isDiscountVisible ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </button>
+
+              {isDiscountVisible && (
+                <div className="mt-3 space-y-2 animate-in fade-in-0 slide-in-from-top-2 duration-300">
+                  <div className="flex items-center gap-1 text-xs text-gray-500"><ShieldCheck size={14} className="text-blue-500"/><span>Max cart discount: <strong>₹{maxCartDiscount.toFixed(2)}</strong></span></div>
+                  <div className="flex gap-2 pt-1">
+                    {quickDiscountPercentages.map(perc => {
+                        const discountAmount = (cartSubtotal * perc) / 100;
+                        const isDisabled = discountAmount > maxCartDiscount;
+                        return (
+                            <button key={perc} onClick={() => { setDiscountType('PERCENT'); setTotalDiscountInput(String(perc)); }} disabled={isDisabled} className="flex-1 text-xs bg-blue-50 text-blue-700 rounded-full py-1 px-2 border hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                                {perc}%
+                            </button>
+                        )
+                    })}
+                  </div>
+                  <div className="flex">
+                    <input type="number" value={totalDiscountInput} onChange={(e) => setTotalDiscountInput(e.target.value)} className="w-full p-2 border rounded-l-md text-sm" placeholder="e.g., 10"/>
+                    <select value={discountType} onChange={(e) => setDiscountType(e.target.value as 'PERCENT' | 'FIXED')} className="p-2 border-t border-b border-r rounded-r-md bg-gray-100 text-sm">
+                      <option value="PERCENT">%</option>
+                      <option value="FIXED">₹</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
+
             <div className="space-y-1 text-sm mb-4">
               <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span>₹{cartSubtotal.toFixed(2)}</span></div>
               <div className="flex justify-between text-red-600"><span className="text-gray-600">Total Discount</span><span>- ₹{finalTotalDiscount.toFixed(2)}</span></div>
