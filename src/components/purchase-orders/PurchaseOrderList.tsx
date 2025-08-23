@@ -74,17 +74,29 @@ export default function PurchaseOrderList() {
   if (error) return <div>Error fetching data: {(error as Error).message}</div>;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="md:col-span-1">
+    <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+      <div className="md:col-span-2">
         {errorMessage && <div className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-100 flex items-center gap-2"><AlertCircle size={16} /> {errorMessage}</div>}
         <div className="border rounded-lg bg-white">
           <Table>
             {/* ADDED: "Actions" header */}
-            <TableHeader><TableRow><TableHead>PO ID</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead><TableHead className="text-center">Actions</TableHead></TableRow></TableHeader>
+            <TableHeader>
+              <TableRow>
+                <TableHead>PO ID</TableHead>
+                <TableHead>Product Name</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-center">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
             <TableBody>
               {purchaseOrders?.map((order) => (
                 <TableRow key={order.id} onClick={() => handleRowClick(order)} className={`cursor-pointer ${selectedOrder?.id === order.id ? 'bg-brand-secondary/30' : 'hover:bg-gray-50'}`}>
                   <TableCell className="font-medium">#{order.purchaseOrderId}</TableCell>
+                  <TableCell>
+                    <span className="font-medium">{order.items[0]?.productName || 'N/A'}</span>
+                    {order.items.length > 1 && <span className="text-xs text-gray-500 ml-1 whitespace-nowrap">{`+ ${order.items.length - 1} more`}</span>}
+                  </TableCell>
                   <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">₹{order.totalAmount.toFixed(2)}</TableCell>
                   {/* ADDED: Cell with conditional delete button */}
@@ -100,7 +112,7 @@ export default function PurchaseOrderList() {
         </div>
       </div>
       
-      <div className="hidden md:block md:col-span-2">
+      <div className="hidden md:block md:col-span-3">
         {selectedOrder ? (
             <PurchaseOrderDetail 
               order={selectedOrder} 
