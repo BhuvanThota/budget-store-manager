@@ -45,7 +45,7 @@ export default function OrderDetail({ order, onEdit, onDelete, onClose, isEmbedd
   if (!order) return null;
 
   return (
-    <div className={`bg-white h-full flex flex-col relative ${isEmbedded ? '' : 'p-6 rounded-lg shadow-md'}`}>
+    <div className={`bg-white flex flex-col relative ${isEmbedded ? '' : 'p-6 rounded-lg shadow-md'}`}>
       {isEmbedded && (
         <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center z-10"><X size={18} /></button>
       )}
