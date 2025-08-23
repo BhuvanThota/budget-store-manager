@@ -6,7 +6,9 @@ import { Product } from '@/types/product';
 import { Category } from '@/types/category'; // NEW: Import Category
 import CartModal, { CartItem } from '@/components/CartModal';
 import CartSidebar from '@/components/CartSidebar';
-import { ShoppingCart, Plus, Minus, Search, Package, Tag, AlertTriangle } from 'lucide-react'; // NEW: Import Tag
+import DesktopProductCard from '@/components/pos/DesktopProductCard';
+import MobileProductListItem from '@/components/pos/MobileProductListItem';
+import { ShoppingCart, Search, Package, Tag, AlertTriangle } from 'lucide-react'; // NEW: Import Tag
 
 export default function PosPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -188,108 +190,6 @@ export default function PosPage() {
       </p>
     </div>
   );
-  
-  // Desktop Product Card Component
-  const DesktopProductCard = ({ product }: { product: Product }) => {
-    const cartItem = cartMap.get(product.id);
-    return (
-      <div 
-        className={`bg-white rounded-lg shadow-md border transition-all duration-200 hover:shadow-lg ${
-          cartItem ? 'border-brand-primary ring-2 ring-brand-primary ring-opacity-20' : 'border-gray-200'
-        }`}
-      >
-        <div className="p-3">
-          <div className="text-center">
-            <h3 className="font-bold text-gray-800 text-md leading-tight line-clamp-2 min-h-[2rem]">
-              {product.name}
-            </h3>
-            <div className="space-y-1 mb-3">
-              <div className="text-sm font-bold text-brand-primary">₹{product.sellPrice.toFixed(2)}</div>
-              <div className="text-xs text-gray-500">Stock: {product.currentStock}</div>
-            </div>
-          </div>
-          {cartItem ? (
-            <div className="flex items-center justify-center gap-1">
-              <button 
-                onClick={() => handleUpdateQuantity(product.id, cartItem.quantity - 1)}
-                className="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-6 h-6 flex items-center justify-center transition-all active:scale-95 shadow-sm"
-              >
-                <Minus size={12} />
-              </button>
-              <div className="bg-gray-100 rounded-lg px-2 py-1 min-w-[2rem] text-center">
-                <span className="font-bold text-sm text-gray-800">{cartItem.quantity}</span>
-              </div>
-              <button 
-                onClick={() => handleUpdateQuantity(product.id, cartItem.quantity + 1)}
-                className="bg-brand-primary hover:bg-brand-primary/90 text-white rounded-full w-6 h-6 flex items-center justify-center transition-all active:scale-95 shadow-sm"
-              >
-                <Plus size={12} />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => handleAddToCart(product)}
-              className="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2 px-2 rounded-lg transition-all active:scale-95 shadow-sm flex items-center justify-center gap-1 text-xs"
-            >
-              <Plus size={12} />
-              Add
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // Mobile Product Card Component (Smaller)
-  const MobileProductCard = ({ product }: { product: Product }) => {
-    const cartItem = cartMap.get(product.id);
-    return (
-      <div 
-        className={`bg-white rounded-lg shadow-md border transition-all duration-200 hover:shadow-lg ${
-          cartItem ? 'border-brand-primary ring-2 ring-brand-primary ring-opacity-20' : 'border-gray-200'
-        }`}
-      >
-        <div className="p-2.5">
-          <div className="text-center">
-            <h3 className="font-bold text-gray-800 text-sm leading-tight line-clamp-2 min-h-[2rem]">
-              {product.name}
-            </h3>
-            <div className="space-y-1 mb-2">
-              <div className="text-sm font-bold text-brand-primary">₹{product.sellPrice.toFixed(2)}</div>
-              <div className="text-xs text-gray-500">Stock: {product.currentStock}</div>
-            </div>
-          </div>
-          {cartItem ? (
-            <div className="flex items-center justify-center gap-1.5">
-              <button 
-                onClick={() => handleUpdateQuantity(product.id, cartItem.quantity - 1)}
-                className="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-6 h-6 flex items-center justify-center transition-all active:scale-95 shadow-sm"
-              >
-                <Minus size={12} />
-              </button>
-              <div className="bg-gray-100 rounded-lg px-2 py-1 min-w-[2rem] text-center">
-                <span className="font-bold text-sm text-gray-800">{cartItem.quantity}</span>
-              </div>
-              <button 
-                onClick={() => handleUpdateQuantity(product.id, cartItem.quantity + 1)}
-                className="bg-brand-primary hover:bg-brand-primary/90 text-white rounded-full w-6 h-6 flex items-center justify-center transition-all active:scale-95 shadow-sm"
-              >
-                <Plus size={12} />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => handleAddToCart(product)}
-              className="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-1.5 px-2 rounded-lg transition-all active:scale-95 shadow-sm flex items-center justify-center gap-1 text-xs"
-            >
-              <Plus size={12} />
-              Add
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   return (
     <>
@@ -354,9 +254,15 @@ export default function PosPage() {
               ) : filteredProducts.length === 0 ? (
                 <EmptyState />
               ) : (
-                <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-3">
                   {filteredProducts.map(product => (
-                    <DesktopProductCard key={product.id} product={product} />
+                    <DesktopProductCard 
+                      key={product.id} 
+                      product={product}
+                      cartItem={cartMap.get(product.id)}
+                      handleAddToCart={handleAddToCart}
+                      handleUpdateQuantity={handleUpdateQuantity}
+                    />
                   ))}
                 </div>
               )}
@@ -398,9 +304,15 @@ export default function PosPage() {
             ) : filteredProducts.length === 0 ? (
               <EmptyState />
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+              <div className="space-y-2">
                 {filteredProducts.map(product => (
-                  <MobileProductCard key={product.id} product={product} />
+                 <MobileProductListItem 
+                    key={product.id} 
+                    product={product}
+                    cartItem={cartMap.get(product.id)}
+                    handleUpdateQuantity={handleUpdateQuantity}
+                    handleAddToCart={handleAddToCart}
+                  />               
                 ))}
               </div>
             )}
