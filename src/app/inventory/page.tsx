@@ -215,7 +215,7 @@ export default function InventoryPage() {
 
   return (
     <>
-      <div className="mx-auto max-w-[1000px]">
+      <div className="mx-auto max-w-[1200px]">
         <div className="md:hidden h-[calc(100vh-80px)]">
            <ProductList
             products={filteredProducts}
@@ -232,7 +232,7 @@ export default function InventoryPage() {
         </div>
 
         <div className="hidden md:flex h-[calc(100vh-80px)] p-6 gap-6">
-          <div className="w-[40%] lg:w-[30%] h-full">
+          <div className="w-[40%] h-full">
            <ProductList
             products={filteredProducts}
             selectedProduct={selectedProduct}
@@ -246,7 +246,7 @@ export default function InventoryPage() {
             onAddProduct={handleAddProduct} // Pass handler
           />
           </div>
-          <div className="w-[60%] lg:w-[70%] h-full">
+          <div className="w-[60%] h-full">
             <ProductDetail 
               product={selectedProduct} 
               onSave={handleProductSaved}
