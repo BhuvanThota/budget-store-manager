@@ -14,6 +14,7 @@ import { Boxes } from 'lucide-react';
 import ManageCategoriesModal from '@/components/inventory/ManageCategoriesModal';
 import AddEditProductModal from '@/components/AddEditProductModal'; // NEW: Import modal
 import InfoModal from '@/components/InfoModal'; // NEW: Import modal
+import AddEditPurchaseOrderModal from '@/components/purchase-orders/AddEditPurchaseOrderModal'; // --- NEW: Import the Purchase Order Modal ---
 
 export default function InventoryPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -37,6 +38,9 @@ export default function InventoryPage() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [infoModalContent, setInfoModalContent] = useState<{ title: string; message: string | ReactNode }>({ title: '', message: '' });
 
+  // --- NEW: State for the Purchase Order Modal ---
+  const [isAddPurchaseModalOpen, setIsAddPurchaseModalOpen] = useState(false);
+  
 
   const fetchInitialData = useCallback(async () => {
     if (allProducts.length === 0) setIsLoading(true);
@@ -176,6 +180,17 @@ export default function InventoryPage() {
     fetchInitialData();
   };
 
+    // --- NEW: Handler for the Add Purchase button ---
+  const handleAddPurchaseClick = (product: Product) => {
+    setSelectedProduct(product);
+    setIsAddPurchaseModalOpen(true);
+  };
+  
+  const handlePurchaseSaved = () => {
+    // Refetch data to show updated stock and cost price
+    fetchInitialData();
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-80px)]">
@@ -251,10 +266,21 @@ export default function InventoryPage() {
               product={selectedProduct} 
               onSave={handleProductSaved}
               onDelete={handleOpenDeleteModal}
+              onAddPurchase={handleAddPurchaseClick} // NEW
             />
           </div>
         </div>
       </div>
+
+      {/* --- NEW: Add the Purchase Order Modal to the page --- */}
+      <AddEditPurchaseOrderModal
+        isOpen={isAddPurchaseModalOpen}
+        onClose={() => setIsAddPurchaseModalOpen(false)}
+        onSave={handlePurchaseSaved}
+        allProducts={allProducts}
+        orderToEdit={null} // We are only creating new POs here
+        initialProduct={selectedProduct}
+      />
       
       {/* MODAL WIRING */}
       <AddEditProductModal

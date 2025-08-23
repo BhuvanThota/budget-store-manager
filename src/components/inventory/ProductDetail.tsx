@@ -4,12 +4,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Product } from '@/types/product';
 import { Category } from '@/types/category';
-import { Boxes, Save, AlertTriangle, TrendingUp, TrendingDown, Edit3, DollarSign, Trash2, Tag, PlusCircle, ShieldCheck } from 'lucide-react'; // MODIFIED: Added PlusCircle
+import { Boxes, Save, AlertTriangle, TrendingUp, TrendingDown, Edit3, DollarSign, Trash2, Tag, PlusCircle, ShieldCheck, ShoppingCart } from 'lucide-react'; // MODIFIED: Added PlusCircle
 
 interface ProductDetailProps {
   product: Product | null;
   onSave: () => void;
   onDelete: (productId: string) => void;
+  onAddPurchase: (product: Product) => void; // NEW PROP
 }
 
 // CORRECTED: This interface is essential for TypeScript to recognize floorPrice in our form data
@@ -22,7 +23,7 @@ const capitalizeFirstLetter = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
-export default function ProductDetail({ product, onSave, onDelete }: ProductDetailProps) {
+export default function ProductDetail({ product, onSave, onDelete, onAddPurchase }: ProductDetailProps) {
   const [formData, setFormData] = useState<Partial<EditableProduct>>({});
   const [categories, setCategories] = useState<Category[]>([]);
   const [highestCostPrice, setHighestCostPrice] = useState<number>(0);
@@ -239,8 +240,28 @@ export default function ProductDetail({ product, onSave, onDelete }: ProductDeta
         </div>
       </div>
       <div className="p-4 border-t bg-gray-50 flex gap-3">
-        <button onClick={() => product && onDelete(product.id)} className="w-1/3 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"><Trash2 size={16} />Delete</button>
-        <button onClick={handleSave} disabled={isSaving} className="w-2/3 bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"><Save size={16} />{isSaving ? 'Saving...' : 'Save Changes'}</button>
+        <button 
+          onClick={() => product && onDelete(product.id)} 
+          className="w-1/5 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+        >
+          <Trash2 size={16} />
+          Delete
+        </button>
+        <button 
+          onClick={() => onAddPurchase(product)}
+          className="w-2/5 bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+        >
+          <ShoppingCart size={16} />
+          Add Purchase
+        </button>
+        <button 
+          onClick={handleSave} 
+          disabled={isSaving} 
+          className="w-2/5 bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          <Save size={16} />
+          {isSaving ? 'Saving...' : 'Save Changes'}
+        </button>
       </div>
     </div>  
   );
