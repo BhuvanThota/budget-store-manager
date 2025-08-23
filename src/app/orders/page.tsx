@@ -173,7 +173,7 @@ export default function OrdersPage() {
             )}
           </div>
 
-          <div className="hidden md:block md:col-span-2 h-full">
+          <div className="hidden h-full md:block md:col-span-2">
               <OrderDetail order={selectedOrder} onEdit={handleEditClick} onDelete={handleDeleteClick} />
           </div>
         </div>
